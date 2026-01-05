@@ -56,7 +56,10 @@ const MEDICAL_TRIGGERS = [
 const DISORDERED_EATING_TRIGGERS = [
   'binge',
   'purge',
+  'purging',
   'throw up',
+  'vomiting',
+  'laxatives',
   'out of control',
   "can't control",
   'ate too much',
@@ -66,7 +69,10 @@ const DISORDERED_EATING_TRIGGERS = [
   'stop eating',
   "don't deserve",
   'fast for',
+  'fasting for',
+  'water fast',
   'cleanse',
+  'detox',
   'compensate',
 ];
 
@@ -75,8 +81,11 @@ const CRISIS_TRIGGERS = [
   'suicide',
   'want to die',
   'end it all',
+  'end my life',
   'self harm',
   'hurt myself',
+  'cut myself',
+  'overdose',
   "don't want to live",
 ];
 
@@ -97,7 +106,9 @@ export function classifyMessage(message: string): SafetyAnalysis {
 
   const checkTriggers = (triggers: string[]) => {
     return triggers.filter(trigger => {
-      if (lowerMessage.includes(trigger)) {
+      const escapedTrigger = trigger.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`\\b${escapedTrigger}\\b`, 'i');
+      if (regex.test(lowerMessage)) {
         triggeredKeywords.push(trigger);
         return true;
       }
