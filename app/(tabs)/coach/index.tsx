@@ -159,7 +159,7 @@ export default function CoachScreen() {
           cravingsLogged: cravings.length,
           cravingsResisted: cravings.filter(c => c.outcome === 'resisted').length,
         }
-      ) + '\n\nIMPORTANT: The user clicked "Need more help" after your last response. They need more support on this topic. Provide a different approach, ask a clarifying question, or offer an alternative perspective. Keep it natural and conversational (2-4 sentences). Reference what was discussed to show continuity.';
+      ) + '\n\n[USER FEEDBACK: Need more help - try different approach]';
       
       setIsStreaming(true);
       setStreamingContent('');

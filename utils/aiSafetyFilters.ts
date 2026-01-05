@@ -468,18 +468,16 @@ function getVariationGuidance(conversationHistory: string): string {
 - Don't repeat the same structure: Acknowledge → Technique → Encouragement gets stale`;
 }
 
-export function buildSafePrompt(
-  userMessage: string,
-  analysis: SafetyAnalysis,
-  conversationHistory: string,
-  isFirstMessage: boolean,
+export function buildSystemPrompt(
   userContext: {
     goalMode: string;
     cravingsLogged: number;
     cravingsResisted: number;
   }
 ): string {
-  const baseIdentity = `You are Less, a wellness habit coach inside CraveLess.
+  const goalGuidance = getGoalModeGuidance(userContext.goalMode);
+  
+  return `You are Less, a wellness habit coach inside CraveLess.
 
 CRITICAL - YOUR SCOPE:
 - You are NOT a doctor, therapist, nutritionist, or dietitian
@@ -505,54 +503,117 @@ CORE BELIEFS:
 - Delay is often enough
 - Slips are data, not mistakes
 - Habits change gradually
-- Safety over streaks`;
+- Safety over streaks
 
-  const timeContext = getTimeOfDayContext();
-  const goalGuidance = getGoalModeGuidance(userContext.goalMode);
-  const variationGuidance = getVariationGuidance(conversationHistory);
-  
-  const contextSection = `
 USER CONTEXT:
 - Cravings logged: ${userContext.cravingsLogged}
 - Resisted: ${userContext.cravingsResisted}
 
-${goalGuidance}
+${goalGuidance}`;
+}
 
-${timeContext}
+export function buildUserMessage(
+  userMessage: string,
+  analysis: SafetyAnalysis,
+  conversationHistory: string,
+  isFirstMessage: boolean
+): string {
+  const timeContext = getTimeOfDayContext();
+  const variationGuidance = getVariationGuidance(conversationHistory);
+  
+  let message = '';
+  
+  if (isFirstMessage) {
+    message += `This is the user's FIRST message. Introduce yourself briefly as "Less" (1-2 sentences max) then respond.\n\n`;
+  }
+  
+  if (analysis.riskLevel !== 'low') {
+    message += `[SAFETY: ${analysis.category}, ${analysis.riskLevel} risk]\n${analysis.safetyInstructions}\n\n`;
+  }
+  
+  message += `${timeContext}\n\n`;
+  message += `${variationGuidance}\n\n`;
+  message += userMessage;
+  
+  return message;
+}
 
-${variationGuidance}`;
+function getCompactTimeContext(): string {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Morning: fresh start energy';
+  if (hour >= 12 && hour < 17) return 'Afternoon: energy dip, stress';
+  if (hour >= 17 && hour < 22) return 'Evening: winding down';
+  return 'Late night: extra gentle';
+}
 
-  const conversationSection = isFirstMessage 
-    ? `This is the user's FIRST message in a NEW conversation. Introduce yourself briefly as "Less" (1-2 sentences max) then respond to their message.`
-    : `CONVERSATION HISTORY:
-${conversationHistory}
+function getCompactGoalGuidance(goalMode: string): string {
+  switch (goalMode) {
+    case 'quit': return 'Goal: Quit sugar';
+    case 'reduce': return 'Goal: Reduce gradually';
+    case 'weight-loss': return 'Goal: Weight loss (HIGH SENSITIVITY - no calorie/weight talk)';
+    case 'diabetes': return 'Goal: Diabetes (MEDICAL BOUNDARY - defer to provider)';
+    case 'habit-control': return 'Goal: Break emotional eating patterns';
+    default: return 'Goal: Not set';
+  }
+}
 
-This is an ONGOING conversation. DO NOT introduce yourself again. Just respond naturally to continue the conversation.`;
+function getCompactSafetyInstructions(analysis: SafetyAnalysis): string {
+  if (analysis.riskLevel === 'crisis') return '[CRISIS: Focus only on safety, no coaching]';
+  if (analysis.category === 'disordered-eating') return '[DISORDERED EATING: NO restriction language, self-compassion only]';
+  if (analysis.category === 'medical-advice-request') return '[MEDICAL: Refuse politely, redirect to provider]';
+  if (analysis.category === 'mental-distress') return '[DISTRESS: Validate first, zero pressure]';
+  if (analysis.category === 'slip-overeating') return '[SLIP: NO streak talk, learning-focused only]';
+  return '';
+}
 
-  const safetySection = `
-SAFETY ANALYSIS FOR THIS MESSAGE:
-Category: ${analysis.category}
-Risk Level: ${analysis.riskLevel}
-${analysis.triggeredKeywords.length > 0 ? `Triggered Keywords: ${analysis.triggeredKeywords.join(', ')}` : ''}
+export function buildSafePrompt(
+  userMessage: string,
+  analysis: SafetyAnalysis,
+  conversationHistory: string,
+  isFirstMessage: boolean,
+  userContext: {
+    goalMode: string;
+    cravingsLogged: number;
+    cravingsResisted: number;
+  }
+): string {
+  if (isFirstMessage) {
+    const baseIdentity = `You are Less, a wellness habit coach inside CraveLess.
 
-${analysis.safetyInstructions}`;
+SCOPE: Emotional support, craving awareness, habit guidance ONLY. NOT a doctor/therapist/nutritionist.
+APPROACH: Calm, empathetic, non-judgmental. Short (2-4 sentences). Validate first. No shame/fear.
+RULES: Never give medical advice. No "you failed" language. Food is morally neutral.
+BELIEFS: Cravings are temporary. Awareness beats restriction. Slips are data. Safety over streaks.`;
 
-  const userMessageSection = `
-USER MESSAGE: ${userMessage}`;
-
-  const responseGuidance = isFirstMessage
-    ? `Respond as Less with a natural, conversational reply. Keep your introduction brief then address their message.`
-    : `Continue the conversation naturally. Stay in character as Less and respond appropriately to the safety context.`;
-
-  return `${baseIdentity}
-
-${contextSection}
-
-${conversationSection}
-
-${safetySection}
-
-${userMessageSection}
-
-${responseGuidance}`;
+    const timeContext = getCompactTimeContext();
+    const goalGuidance = getCompactGoalGuidance(userContext.goalMode);
+    const safetyInstructions = getCompactSafetyInstructions(analysis);
+    
+    let prompt = `${baseIdentity}\n\n${goalGuidance} | ${timeContext} | Stats: ${userContext.cravingsLogged} logged, ${userContext.cravingsResisted} resisted`;
+    
+    if (safetyInstructions) {
+      prompt += `\n\n${safetyInstructions}\n${analysis.safetyInstructions}`;
+    }
+    
+    prompt += `\n\nIntroduce yourself briefly as "Less" (1-2 sentences) then respond to: ${userMessage}`;
+    
+    return prompt;
+  } else {
+    const variationGuidance = getVariationGuidance(conversationHistory);
+    const safetyInstructions = getCompactSafetyInstructions(analysis);
+    const timeContext = getCompactTimeContext();
+    
+    let prompt = `${timeContext} | ${variationGuidance}`;
+    
+    if (safetyInstructions) {
+      prompt += `\n\n${safetyInstructions}`;
+      if (analysis.riskLevel !== 'low') {
+        prompt += `\n${analysis.safetyInstructions}`;
+      }
+    }
+    
+    prompt += `\n\nUser: ${userMessage}`;
+    
+    return prompt;
+  }
 }
