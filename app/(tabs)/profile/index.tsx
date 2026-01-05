@@ -65,10 +65,10 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About SweetControl</Text>
+          <Text style={styles.sectionTitle}>About CraveLess</Text>
           <View style={styles.aboutCard}>
             <Text style={styles.aboutText}>
-              SweetControl helps you take control of your sugar cravings through mindful tracking, supportive AI coaching, and proven behavior change techniques.
+              CraveLess helps you take control of your sugar cravings through mindful tracking, supportive AI coaching, and proven behavior change techniques.
             </Text>
             <Text style={[styles.aboutText, { marginTop: 12 }]}>
               Remember: Progress, not perfection. Every small step counts.

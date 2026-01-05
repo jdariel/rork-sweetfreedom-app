@@ -5,10 +5,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { Craving, UserProfile, Streak, GoalMode, CravingOutcome, CoachMessage } from '@/types';
 
 const STORAGE_KEYS = {
-  PROFILE: '@sweetcontrol_profile',
-  CRAVINGS: '@sweetcontrol_cravings',
-  STREAK: '@sweetcontrol_streak',
-  COACH_MESSAGES: '@sweetcontrol_coach_messages',
+  PROFILE: '@craveless_profile',
+  CRAVINGS: '@craveless_cravings',
+  STREAK: '@craveless_streak',
+  COACH_MESSAGES: '@craveless_coach_messages',
 };
 
 export const [AppProvider, useApp] = createContextHook(() => {
