@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useApp } from '@/contexts/AppContext';
 import colors from '@/constants/colors';
-import { TrendingUp, Target, Heart, Calendar } from 'lucide-react-native';
+import { TrendingUp, Target, Heart, Calendar, Clock, Smile, Zap } from 'lucide-react-native';
 import { useMemo } from 'react';
 
 export default function ProgressScreen() {
@@ -24,7 +24,36 @@ export default function ProgressScreen() {
       return acc;
     }, {} as Record<string, number>);
 
-    const topEmotion = Object.entries(emotionCounts).sort((a, b) => b[1] - a[1])[0];
+    const topEmotions = Object.entries(emotionCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2);
+
+    const timeOfDayCounts = cravings.reduce((acc, c) => {
+      const hour = new Date(c.timestamp).getHours();
+      let period: string;
+      if (hour >= 6 && hour < 12) period = 'Morning';
+      else if (hour >= 12 && hour < 18) period = 'Afternoon';
+      else period = 'Night';
+      acc[period] = (acc[period] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const peakTime = Object.entries(timeOfDayCounts)
+      .sort((a, b) => b[1] - a[1])[0];
+
+    const cravingsWithDelay = cravings.filter(c => 
+      c.delayUsed && 
+      typeof c.intensity === 'number' && 
+      typeof c.postDelayIntensity === 'number'
+    );
+
+    const totalIntensityDrop = cravingsWithDelay.reduce((sum, c) => {
+      return sum + (c.intensity - (c.postDelayIntensity || c.intensity));
+    }, 0);
+
+    const avgIntensityDrop = cravingsWithDelay.length > 0 
+      ? Math.round(totalIntensityDrop / cravingsWithDelay.length)
+      : 0;
 
     return {
       total,
@@ -35,7 +64,10 @@ export default function ProgressScreen() {
       last7DaysCount: last7Days.length,
       resistanceRate: total > 0 ? Math.round((resisted / total) * 100) : 0,
       awarenessRate: total > 0 ? Math.round(((resisted + smallPortion) / total) * 100) : 0,
-      topEmotion: topEmotion ? topEmotion[0] : 'N/A',
+      topEmotions,
+      peakTime: peakTime ? peakTime[0] : null,
+      avgIntensityDrop,
+      delaySuccessRate: cravingsWithDelay.length,
     };
   }, [cravings]);
 
@@ -84,21 +116,45 @@ export default function ProgressScreen() {
         </View>
 
         <View style={styles.insightsCard}>
-          <Text style={styles.insightsTitle}>Learning Insights</Text>
+          <Text style={styles.insightsTitle}>Smart Insights</Text>
           
-          <View style={styles.insightRow}>
-            <Text style={styles.insightLabel}>Most Common Emotion</Text>
-            <Text style={styles.insightValue}>{stats.topEmotion}</Text>
-          </View>
+          {stats.peakTime && (
+            <View style={styles.insightRow}>
+              <View style={styles.insightLeft}>
+                <Clock size={20} color={colors.primary} style={styles.insightIcon} />
+                <Text style={styles.insightLabel}>Peak Craving Time</Text>
+              </View>
+              <Text style={styles.insightValue}>{stats.peakTime}</Text>
+            </View>
+          )}
+
+          {stats.topEmotions.length > 0 && (
+            <View style={styles.insightRow}>
+              <View style={styles.insightLeft}>
+                <Smile size={20} color={colors.secondary} style={styles.insightIcon} />
+                <Text style={styles.insightLabel}>Top Emotions</Text>
+              </View>
+              <Text style={styles.insightValue}>
+                {stats.topEmotions.map((e, i) => e[0]).join(', ')}
+              </Text>
+            </View>
+          )}
+
+          {stats.delaySuccessRate > 0 && (
+            <View style={styles.insightRow}>
+              <View style={styles.insightLeft}>
+                <Zap size={20} color={colors.success} style={styles.insightIcon} />
+                <Text style={styles.insightLabel}>Avg. Intensity Drop</Text>
+              </View>
+              <Text style={styles.insightValue}>-{stats.avgIntensityDrop} pts</Text>
+            </View>
+          )}
 
           <View style={styles.insightRow}>
-            <Text style={styles.insightLabel}>Used Delay Technique</Text>
+            <View style={styles.insightLeft}>
+              <Text style={styles.insightLabel}>Used Delay Technique</Text>
+            </View>
             <Text style={styles.insightValue}>{stats.withDelay} times</Text>
-          </View>
-
-          <View style={styles.insightRow}>
-            <Text style={styles.insightLabel}>Gave In (Learning Data)</Text>
-            <Text style={styles.insightValue}>{stats.gaveIn}</Text>
           </View>
         </View>
 
@@ -224,6 +280,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  insightLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  insightIcon: {
+    marginRight: 8,
+  },
   insightLabel: {
     fontSize: 16,
     color: colors.textSecondary,
@@ -232,6 +296,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600' as const,
     color: colors.text,
+    textTransform: 'capitalize' as const,
   },
   emptyState: {
     alignItems: 'center',
