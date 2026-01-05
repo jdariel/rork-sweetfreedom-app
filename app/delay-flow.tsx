@@ -4,13 +4,13 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated, TextInput } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '@/constants/colors';
 import { replacementSuggestions } from '@/constants/goalModes';
-import { Clock, CheckCircle, X, MessageCircle } from 'lucide-react-native';
+import { Clock, CheckCircle, X, MessageCircle, ThumbsUp, Smile, Brain } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
 
 export default function DelayFlowScreen() {
   const { cravingId } = useLocalSearchParams<{ cravingId: string }>();
-  const { updateCravingFeedback, updateCravingDelayUsed } = useApp();
-  const [stage, setStage] = useState<'delay' | 'suggestions' | 'feedback' | 'complete'>('delay');
+  const { updateCravingFeedback, updateCravingDelayUsed, updateCravingOutcome } = useApp();
+  const [stage, setStage] = useState<'delay' | 'suggestions' | 'feedback' | 'outcome' | 'complete'>('delay');
   const [countdown, setCountdown] = useState<number>(300);
   const [pulseAnim] = useState(new Animated.Value(1));
   const [postDelayIntensity, setPostDelayIntensity] = useState<number>(5);
@@ -61,11 +61,73 @@ export default function DelayFlowScreen() {
     if (cravingId) {
       updateCravingFeedback(cravingId, postDelayIntensity, whatHelped || undefined);
     }
+    setStage('outcome');
+  };
+
+  const handleOutcomeSelect = (outcome: 'resisted' | 'small-portion' | 'gave-in') => {
+    if (cravingId) {
+      updateCravingOutcome(cravingId, outcome);
+    }
     setStage('complete');
     setTimeout(() => {
       router.back();
     }, 2000);
   };
+
+  if (stage === 'outcome') {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.header}>
+          <Text style={styles.title}>What Happened?</Text>
+        </View>
+
+        <View style={styles.outcomeContainer}>
+          <Text style={styles.outcomeSubtitle}>
+            Let&apos;s record what happened. This helps track your progress.
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.outcomeCard, styles.resistedCard]}
+            onPress={() => handleOutcomeSelect('resisted')}
+          >
+            <View style={styles.outcomeIconContainer}>
+              <ThumbsUp size={32} color={colors.success} />
+            </View>
+            <View style={styles.outcomeTextContainer}>
+              <Text style={styles.outcomeTitle}>Resisted</Text>
+              <Text style={styles.outcomeDescription}>I didn&apos;t give in to the craving</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.outcomeCard, styles.smallPortionCard]}
+            onPress={() => handleOutcomeSelect('small-portion')}
+          >
+            <View style={styles.outcomeIconContainer}>
+              <Smile size={32} color={colors.warning} />
+            </View>
+            <View style={styles.outcomeTextContainer}>
+              <Text style={styles.outcomeTitle}>Small Portion</Text>
+              <Text style={styles.outcomeDescription}>I had a little bit mindfully</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.outcomeCard, styles.gaveInCard]}
+            onPress={() => handleOutcomeSelect('gave-in')}
+          >
+            <View style={styles.outcomeIconContainer}>
+              <Brain size={32} color={colors.textSecondary} />
+            </View>
+            <View style={styles.outcomeTextContainer}>
+              <Text style={styles.outcomeTitle}>Gave In</Text>
+              <Text style={styles.outcomeDescription}>Learning data - no judgment</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (stage === 'complete') {
     return (
@@ -173,7 +235,7 @@ export default function DelayFlowScreen() {
             style={styles.continueButton}
             onPress={handleFeedbackSubmit}
           >
-            <Text style={styles.continueButtonText}>Done</Text>
+            <Text style={styles.continueButtonText}>Continue</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -424,5 +486,56 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     minHeight: 100,
     textAlignVertical: 'top',
+  },
+  outcomeContainer: {
+    flex: 1,
+    padding: 20,
+  },
+  outcomeSubtitle: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  outcomeCard: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 2,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  resistedCard: {
+    borderColor: colors.success,
+  },
+  smallPortionCard: {
+    borderColor: colors.warning,
+  },
+  gaveInCard: {
+    borderColor: colors.border,
+  },
+  outcomeIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  outcomeTextContainer: {
+    flex: 1,
+  },
+  outcomeTitle: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  outcomeDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
   },
 });
