@@ -9,7 +9,7 @@ import { classifyMessage, buildSafePrompt } from '@/utils/aiSafetyFilters';
 export default function CoachScreen() {
   const [input, setInput] = useState<string>('');
   const scrollViewRef = useRef<ScrollView>(null);
-  const { coachMessages, addCoachMessage, clearCoachMessages, markMessageHelpCheckComplete, cravings, profile } = useApp();
+  const { coachMessages, addCoachMessage, clearCoachMessages, markMessageHelpCheckComplete, cravings, profile, activateDistressMode, pauseStreak } = useApp();
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [streamingContent, setStreamingContent] = useState<string>('');
   const streamTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -81,6 +81,14 @@ export default function CoachScreen() {
       const userMessage = input.trim();
       
       const safetyAnalysis = classifyMessage(userMessage);
+      
+      if (safetyAnalysis.shouldActivateDistressMode) {
+        activateDistressMode();
+      }
+      
+      if (safetyAnalysis.shouldPauseStreaks) {
+        pauseStreak();
+      }
       
       addCoachMessage({ role: 'user', content: userMessage });
       
@@ -186,6 +194,14 @@ export default function CoachScreen() {
                 style={styles.quickPromptButton}
                 onPress={() => {
                   const safetyAnalysis = classifyMessage(prompt);
+                  
+                  if (safetyAnalysis.shouldActivateDistressMode) {
+                    activateDistressMode();
+                  }
+                  
+                  if (safetyAnalysis.shouldPauseStreaks) {
+                    pauseStreak();
+                  }
                   
                   addCoachMessage({ role: 'user', content: prompt });
                   

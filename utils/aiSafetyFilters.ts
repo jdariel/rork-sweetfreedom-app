@@ -17,6 +17,8 @@ export interface SafetyAnalysis {
   shouldUseFallback: boolean;
   fallbackResponse?: string;
   safetyInstructions: string;
+  shouldActivateDistressMode: boolean;
+  shouldPauseStreaks: boolean;
 }
 
 const MEDIUM_RISK_TRIGGERS = [
@@ -31,6 +33,10 @@ const MEDIUM_RISK_TRIGGERS = [
   'shame',
   'guilty',
   'disgusted',
+  'hate myself for',
+  'ruined',
+  'messed up',
+  'why did i',
 ];
 
 const MEDICAL_TRIGGERS = [
@@ -53,11 +59,15 @@ const DISORDERED_EATING_TRIGGERS = [
   'throw up',
   'out of control',
   "can't control",
-  'overeating',
   'ate too much',
   'punish myself',
   'restrict',
   'starve',
+  'stop eating',
+  "don't deserve",
+  'fast for',
+  'cleanse',
+  'compensate',
 ];
 
 const CRISIS_TRIGGERS = [
@@ -104,6 +114,8 @@ export function classifyMessage(message: string): SafetyAnalysis {
       shouldUseFallback: true,
       fallbackResponse: getCrisisFallback(),
       safetyInstructions: getCrisisSafetyInstructions(),
+      shouldActivateDistressMode: true,
+      shouldPauseStreaks: true,
     };
   }
 
@@ -116,6 +128,8 @@ export function classifyMessage(message: string): SafetyAnalysis {
       shouldUseFallback: true,
       fallbackResponse: getDisorderedEatingFallback(),
       safetyInstructions: getDisorderedEatingSafetyInstructions(),
+      shouldActivateDistressMode: true,
+      shouldPauseStreaks: true,
     };
   }
 
@@ -128,6 +142,8 @@ export function classifyMessage(message: string): SafetyAnalysis {
       shouldUseFallback: true,
       fallbackResponse: getMedicalAdviceFallback(),
       safetyInstructions: getMedicalAdviceSafetyInstructions(),
+      shouldActivateDistressMode: false,
+      shouldPauseStreaks: false,
     };
   }
 
@@ -139,6 +155,8 @@ export function classifyMessage(message: string): SafetyAnalysis {
       triggeredKeywords,
       shouldUseFallback: false,
       safetyInstructions: getMentalDistressSafetyInstructions(),
+      shouldActivateDistressMode: true,
+      shouldPauseStreaks: true,
     };
   }
 
@@ -151,16 +169,20 @@ export function classifyMessage(message: string): SafetyAnalysis {
         triggeredKeywords,
         shouldUseFallback: false,
         safetyInstructions: getHealthConditionSafetyInstructions(),
+        shouldActivateDistressMode: false,
+        shouldPauseStreaks: false,
       };
     }
     
-    if (mediumRiskTriggers.some(t => ['failed', 'broke my streak', 'disappointed in myself'].includes(t))) {
+    if (mediumRiskTriggers.some(t => ['failed', 'broke my streak', 'disappointed in myself', 'shame', 'guilty', 'disgusted', 'hate myself for', 'ruined', 'messed up', 'why did i'].includes(t))) {
       return {
         category: 'slip-overeating',
         riskLevel: 'medium',
         triggeredKeywords,
         shouldUseFallback: false,
         safetyInstructions: getSlipSafetyInstructions(),
+        shouldActivateDistressMode: false,
+        shouldPauseStreaks: true,
       };
     }
   }
@@ -172,6 +194,8 @@ export function classifyMessage(message: string): SafetyAnalysis {
       triggeredKeywords,
       shouldUseFallback: false,
       safetyInstructions: getNormalCravingSafetyInstructions(),
+      shouldActivateDistressMode: false,
+      shouldPauseStreaks: false,
     };
   }
 
@@ -181,6 +205,8 @@ export function classifyMessage(message: string): SafetyAnalysis {
     triggeredKeywords,
     shouldUseFallback: false,
     safetyInstructions: getGeneralSupportInstructions(),
+    shouldActivateDistressMode: false,
+    shouldPauseStreaks: false,
   };
 }
 
@@ -227,15 +253,19 @@ function getCrisisSafetyInstructions(): string {
 }
 
 function getDisorderedEatingSafetyInstructions(): string {
-  return `DISORDERED EATING SENSITIVITY:
-- NO restriction language
-- NO "just resist" advice
-- NO calorie/portion talk
-- Emphasize self-compassion
+  return `DISORDERED EATING SENSITIVITY (MAXIMUM PRIORITY):
+- CRITICAL: NO restriction language of any kind
+- NO "just resist" or "try harder" advice
+- NO calorie/portion/macro talk
+- NO food rules or "should/shouldn't eat X"
+- NO language about control, willpower, or discipline
+- Emphasize self-compassion and safety above all
 - Validate without reinforcing harmful patterns
-- Gently suggest professional support
-- Focus on safety over goals
-- Avoid any language about control or willpower`;
+- Strongly suggest professional support
+- Focus entirely on reducing pressure
+- Never frame eating as success/failure
+- NEVER mention streaks, progress, or goals
+- Remove all performance expectations`;
 }
 
 function getMedicalAdviceSafetyInstructions(): string {
@@ -249,15 +279,17 @@ function getMedicalAdviceSafetyInstructions(): string {
 }
 
 function getMentalDistressSafetyInstructions(): string {
-  return `MENTAL DISTRESS MODE:
+  return `MENTAL DISTRESS MODE (MAXIMUM SAFETY):
 - User is experiencing shame/anxiety/hopelessness
-- Validate emotion FIRST
-- Reduce all pressure
-- NO goals or streaks talk
-- Focus on grounding and compassion
-- Keep responses short and soothing
-- Offer optional, tiny steps only
-- Suggest professional help if appropriate`;
+- Validate emotion FIRST - nothing else matters
+- ZERO pressure, ZERO goals, ZERO streaks
+- Remove all performance language
+- Focus entirely on grounding and compassion
+- Keep responses very short (1-2 sentences)
+- Offer optional, tiny steps only if they ask
+- Never imply they should "do better"
+- Suggest professional help if distress is intense
+- Frame everything as "you're safe, nothing is broken"`;
 }
 
 function getHealthConditionSafetyInstructions(): string {
@@ -272,15 +304,19 @@ function getHealthConditionSafetyInstructions(): string {
 }
 
 function getSlipSafetyInstructions(): string {
-  return `SLIP/OVEREATING RESPONSE:
+  return `SLIP/OVEREATING RESPONSE (CRITICAL - NO STREAK TALK):
 - User mentioned giving in or failing
-- NO punishment language
-- NO "you broke your streak" talk
-- Use neutral, learning-focused language
-- Validate it's human
-- Focus on information gathering, not shame
-- "Today gave us information" approach
-- Keep it light and forward-looking`;
+- NEVER mention streaks, progress lost, or "starting over"
+- NO punishment language whatsoever
+- NO "you broke your streak" or "back to zero" talk
+- Use neutral, learning-focused language ONLY
+- Frame as: "This gave us information" not "you failed"
+- Validate it's completely human and normal
+- Focus on what triggered it (curiosity, not judgment)
+- Ask: "What do you think led to this?" not "Why did you do it?"
+- Keep it extremely light and forward-looking
+- Emphasize: One moment doesn't define anything
+- NO goals talk, NO "get back on track" language`;
 }
 
 function getNormalCravingSafetyInstructions(): string {

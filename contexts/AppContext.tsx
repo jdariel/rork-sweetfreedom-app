@@ -222,11 +222,62 @@ export const [AppProvider, useApp] = createContextHook(() => {
     } else {
       newStreak.current = 0;
       newStreak.lastCravingDate = now;
+      newStreak.isPaused = true;
+      newStreak.pausedAt = now;
     }
 
     setStreak(newStreak);
     saveStreakMutation.mutate(newStreak);
   };
+
+  const pauseStreak = () => {
+    const newStreak = {
+      ...streak,
+      isPaused: true,
+      pausedAt: Date.now(),
+    };
+    setStreak(newStreak);
+    saveStreakMutation.mutate(newStreak);
+  };
+
+  const resumeStreak = () => {
+    const newStreak = {
+      ...streak,
+      isPaused: false,
+      pausedAt: undefined,
+    };
+    setStreak(newStreak);
+    saveStreakMutation.mutate(newStreak);
+  };
+
+  const activateDistressMode = () => {
+    if (!profile) return;
+    const newProfile = {
+      ...profile,
+      isInDistressMode: true,
+      distressModeActivatedAt: Date.now(),
+    };
+    setProfile(newProfile);
+    saveProfileMutation.mutate(newProfile);
+    pauseStreak();
+  };
+
+  const deactivateDistressMode = () => {
+    if (!profile) return;
+    const newProfile = {
+      ...profile,
+      isInDistressMode: false,
+      distressModeActivatedAt: undefined,
+    };
+    setProfile(newProfile);
+    saveProfileMutation.mutate(newProfile);
+  };
+
+  const shouldShowStreaks = useMemo(() => {
+    if (profile?.isInDistressMode) return false;
+    if (streak.isPaused) return false;
+    return true;
+  }, [profile?.isInDistressMode, streak.isPaused]);
 
   const todayCravings = useMemo(() => {
     const today = new Date().setHours(0, 0, 0, 0);
@@ -274,12 +325,17 @@ export const [AppProvider, useApp] = createContextHook(() => {
     coachMessages,
     todayCravings,
     resistedToday,
+    shouldShowStreaks,
     completeOnboarding,
     addCraving,
     updateCravingOutcome,
     addCoachMessage,
     clearCoachMessages,
     markMessageHelpCheckComplete,
+    activateDistressMode,
+    deactivateDistressMode,
+    pauseStreak,
+    resumeStreak,
     isLoading: profileQuery.isLoading || cravingsQuery.isLoading || streakQuery.isLoading || coachMessagesQuery.isLoading,
   };
 });

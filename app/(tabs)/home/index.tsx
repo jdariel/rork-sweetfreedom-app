@@ -3,11 +3,11 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated } from '
 import { useApp } from '@/contexts/AppContext';
 import { goalModeData } from '@/constants/goalModes';
 import colors from '@/constants/colors';
-import { Plus, Flame, Target, Clock, TrendingUp } from 'lucide-react-native';
+import { Plus, Flame, Target, Clock, TrendingUp, Heart } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 
 export default function HomeScreen() {
-  const { profile, streak, todayCravings, resistedToday } = useApp();
+  const { profile, streak, todayCravings, resistedToday, shouldShowStreaks } = useApp();
   const [pulseAnim] = useState(new Animated.Value(1));
 
   useEffect(() => {
@@ -34,14 +34,22 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.streakCard}>
-          <Animated.View style={[styles.streakIconContainer, { transform: [{ scale: pulseAnim }] }]}>
-            <Flame size={48} color={colors.secondary} />
-          </Animated.View>
-          <Text style={styles.streakNumber}>{streak.current}</Text>
-          <Text style={styles.streakLabel}>Day Streak</Text>
-          <Text style={styles.streakSubtext}>Longest: {streak.longest} days</Text>
-        </View>
+        {shouldShowStreaks ? (
+          <View style={styles.streakCard}>
+            <Animated.View style={[styles.streakIconContainer, { transform: [{ scale: pulseAnim }] }]}>
+              <Flame size={48} color={colors.secondary} />
+            </Animated.View>
+            <Text style={styles.streakNumber}>{streak.current}</Text>
+            <Text style={styles.streakLabel}>Day Streak</Text>
+            <Text style={styles.streakSubtext}>Longest: {streak.longest} days</Text>
+          </View>
+        ) : (
+          <View style={styles.pausedCard}>
+            <Heart size={40} color={colors.primary} />
+            <Text style={styles.pausedTitle}>Taking a Breath</Text>
+            <Text style={styles.pausedSubtext}>Streaks are paused. Focus on what feels right for you today.</Text>
+          </View>
+        )}
 
         {goalData && (
           <View style={styles.goalCard}>
@@ -160,6 +168,25 @@ const styles = StyleSheet.create({
   streakSubtext: {
     fontSize: 14,
     color: colors.textLight,
+  },
+  pausedCard: {
+    backgroundColor: colors.calm.tealLight,
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  pausedTitle: {
+    fontSize: 24,
+    fontWeight: '700' as const,
+    color: colors.text,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  pausedSubtext: {
+    fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   goalCard: {
     backgroundColor: colors.calm.tealLight,

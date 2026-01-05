@@ -21,12 +21,16 @@ export interface UserProfile {
   goalMode: GoalMode;
   startDate: number;
   hasCompletedOnboarding: boolean;
+  isInDistressMode?: boolean;
+  distressModeActivatedAt?: number;
 }
 
 export interface Streak {
   current: number;
   longest: number;
   lastCravingDate: number | null;
+  isPaused?: boolean;
+  pausedAt?: number;
 }
 
 export interface CoachMessage {

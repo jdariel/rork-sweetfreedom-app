@@ -1,11 +1,11 @@
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useApp } from '@/contexts/AppContext';
 import colors from '@/constants/colors';
 import { TrendingUp, Target, Heart, Calendar } from 'lucide-react-native';
 import { useMemo } from 'react';
 
 export default function ProgressScreen() {
-  const { cravings, streak } = useApp();
+  const { cravings, streak, shouldShowStreaks, resumeStreak } = useApp();
 
   const stats = useMemo(() => {
     const total = cravings.length;
@@ -34,6 +34,7 @@ export default function ProgressScreen() {
       withDelay,
       last7DaysCount: last7Days.length,
       resistanceRate: total > 0 ? Math.round((resisted / total) * 100) : 0,
+      awarenessRate: total > 0 ? Math.round(((resisted + smallPortion) / total) * 100) : 0,
       topEmotion: topEmotion ? topEmotion[0] : 'N/A',
     };
   }, [cravings]);
@@ -43,8 +44,9 @@ export default function ProgressScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.heroCard}>
           <TrendingUp size={40} color={colors.primary} />
-          <Text style={styles.heroNumber}>{stats.resistanceRate}%</Text>
-          <Text style={styles.heroLabel}>Resistance Rate</Text>
+          <Text style={styles.heroNumber}>{stats.awarenessRate}%</Text>
+          <Text style={styles.heroLabel}>Awareness Rate</Text>
+          <Text style={styles.heroSubtext}>Moments you paused or made a mindful choice</Text>
         </View>
 
         <View style={styles.statsGrid}>
@@ -76,13 +78,13 @@ export default function ProgressScreen() {
             <View style={[styles.statIcon, { backgroundColor: colors.calm.tealLight }]}>
               <TrendingUp size={24} color={colors.primary} />
             </View>
-            <Text style={styles.statNumber}>{streak.longest}</Text>
-            <Text style={styles.statLabel}>Best Streak</Text>
+            <Text style={styles.statNumber}>{shouldShowStreaks ? streak.longest : '—'}</Text>
+            <Text style={styles.statLabel}>{shouldShowStreaks ? 'Best Streak' : 'Paused'}</Text>
           </View>
         </View>
 
         <View style={styles.insightsCard}>
-          <Text style={styles.insightsTitle}>Insights</Text>
+          <Text style={styles.insightsTitle}>Learning Insights</Text>
           
           <View style={styles.insightRow}>
             <Text style={styles.insightLabel}>Most Common Emotion</Text>
@@ -95,10 +97,19 @@ export default function ProgressScreen() {
           </View>
 
           <View style={styles.insightRow}>
-            <Text style={styles.insightLabel}>Small Portions</Text>
-            <Text style={styles.insightValue}>{stats.smallPortion}</Text>
+            <Text style={styles.insightLabel}>Gave In (Learning Data)</Text>
+            <Text style={styles.insightValue}>{stats.gaveIn}</Text>
           </View>
         </View>
+
+        {!shouldShowStreaks && (
+          <TouchableOpacity
+            style={styles.resumeButton}
+            onPress={resumeStreak}
+          >
+            <Text style={styles.resumeButtonText}>Resume Tracking Streaks</Text>
+          </TouchableOpacity>
+        )}
 
         {cravings.length === 0 && (
           <View style={styles.emptyState}>
@@ -144,6 +155,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600' as const,
     color: colors.textSecondary,
+  },
+  heroSubtext: {
+    fontSize: 14,
+    color: colors.textLight,
+    textAlign: 'center',
+    marginTop: 8,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -230,5 +247,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  resumeButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  resumeButtonText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: colors.surface,
   },
 });
