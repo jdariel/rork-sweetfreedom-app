@@ -1,15 +1,20 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '@/constants/colors';
 import { replacementSuggestions } from '@/constants/goalModes';
-import { Clock, CheckCircle, X } from 'lucide-react-native';
+import { Clock, CheckCircle, X, MessageCircle } from 'lucide-react-native';
+import { useApp } from '@/contexts/AppContext';
 
 export default function DelayFlowScreen() {
-  const [stage, setStage] = useState<'delay' | 'suggestions' | 'complete'>('delay');
+  const { cravingId } = useLocalSearchParams<{ cravingId: string }>();
+  const { updateCravingFeedback } = useApp();
+  const [stage, setStage] = useState<'delay' | 'suggestions' | 'feedback' | 'complete'>('delay');
   const [countdown, setCountdown] = useState<number>(300);
   const [pulseAnim] = useState(new Animated.Value(1));
+  const [postDelayIntensity, setPostDelayIntensity] = useState<number>(5);
+  const [whatHelped, setWhatHelped] = useState<string>('');
 
   useEffect(() => {
     if (stage === 'delay' && countdown > 0) {
@@ -45,7 +50,14 @@ export default function DelayFlowScreen() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleComplete = () => {
+  const handleSuggestionTap = () => {
+    setStage('feedback');
+  };
+
+  const handleFeedbackSubmit = () => {
+    if (cravingId) {
+      updateCravingFeedback(cravingId, postDelayIntensity, whatHelped || undefined);
+    }
     setStage('complete');
     setTimeout(() => {
       router.back();
@@ -81,7 +93,7 @@ export default function DelayFlowScreen() {
             <TouchableOpacity
               key={index}
               style={styles.suggestionCard}
-              onPress={handleComplete}
+              onPress={handleSuggestionTap}
             >
               <Text style={styles.suggestionEmoji}>{suggestion.emoji}</Text>
               <View style={styles.suggestionText}>
@@ -93,8 +105,72 @@ export default function DelayFlowScreen() {
         </View>
 
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.skipButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.skipButton} onPress={() => setStage('feedback')}>
             <Text style={styles.skipButtonText}>Skip</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (stage === 'feedback') {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Quick Check-In</Text>
+          <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
+            <X size={24} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.feedbackContainer}>
+          <View style={styles.feedbackIconContainer}>
+            <MessageCircle size={40} color={colors.primary} />
+          </View>
+
+          <View style={styles.feedbackSection}>
+            <Text style={styles.feedbackQuestion}>How strong is the craving now?</Text>
+            <View style={styles.intensityButtons}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                <TouchableOpacity
+                  key={num}
+                  style={[
+                    styles.intensityButton,
+                    postDelayIntensity === num && styles.intensityButtonSelected
+                  ]}
+                  onPress={() => setPostDelayIntensity(num)}
+                >
+                  <Text style={[
+                    styles.intensityButtonText,
+                    postDelayIntensity === num && styles.intensityButtonTextSelected
+                  ]}>
+                    {num}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.feedbackSection}>
+            <Text style={styles.feedbackQuestion}>What helped (if anything)?</Text>
+            <TextInput
+              style={styles.feedbackInput}
+              placeholder="e.g., breathing exercise, distraction..."
+              placeholderTextColor={colors.textLight}
+              value={whatHelped}
+              onChangeText={setWhatHelped}
+              multiline
+              numberOfLines={3}
+            />
+          </View>
+        </View>
+
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={styles.continueButton}
+            onPress={handleFeedbackSubmit}
+          >
+            <Text style={styles.continueButtonText}>Done</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -138,7 +214,7 @@ export default function DelayFlowScreen() {
         >
           <Text style={styles.continueButtonText}>Continue</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.skipButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.skipButton} onPress={() => setStage('feedback')}>
           <Text style={styles.skipButtonText}>Skip</Text>
         </TouchableOpacity>
       </View>
@@ -283,5 +359,62 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600' as const,
     color: colors.textSecondary,
+  },
+  feedbackContainer: {
+    flex: 1,
+    padding: 20,
+  },
+  feedbackIconContainer: {
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 32,
+  },
+  feedbackSection: {
+    marginBottom: 32,
+  },
+  feedbackQuestion: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: colors.text,
+    marginBottom: 16,
+  },
+  intensityButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  intensityButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  intensityButtonSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.calm.tealLight,
+  },
+  intensityButtonText: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: colors.textSecondary,
+  },
+  intensityButtonTextSelected: {
+    color: colors.primaryDark,
+    fontWeight: '700' as const,
+  },
+  feedbackInput: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    fontSize: 16,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minHeight: 100,
+    textAlignVertical: 'top',
   },
 });

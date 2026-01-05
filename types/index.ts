@@ -15,6 +15,8 @@ export interface Craving {
   outcome?: CravingOutcome;
   delayUsed: boolean;
   notes?: string;
+  postDelayIntensity?: number;
+  whatHelped?: string;
 }
 
 export interface UserProfile {

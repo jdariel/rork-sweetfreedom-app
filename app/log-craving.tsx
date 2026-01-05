@@ -18,15 +18,18 @@ export default function LogCravingScreen() {
   const handleSubmit = () => {
     if (!sweetType || !emotion) return;
 
-    addCraving({
+    const newCraving = {
       sweetType,
       intensity,
       emotion,
-      delayUsed: false,
+      delayUsed: true,
       notes: notes || undefined,
-    });
+    };
+    
+    const cravingId = `${Date.now()}-${Math.random()}`;
+    addCraving(newCraving);
 
-    router.replace('/delay-flow');
+    router.replace(`/delay-flow?cravingId=${cravingId}`);
   };
 
   return (

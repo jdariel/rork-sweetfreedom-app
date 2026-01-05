@@ -206,6 +206,14 @@ export const [AppProvider, useApp] = createContextHook(() => {
     }
   };
 
+  const updateCravingFeedback = (id: string, postDelayIntensity: number, whatHelped?: string) => {
+    const updated = cravings.map(c => 
+      c.id === id ? { ...c, postDelayIntensity, whatHelped } : c
+    );
+    setCravings(updated);
+    saveCravingsMutation.mutate(updated);
+  };
+
   const updateStreak = (resisted: boolean) => {
     const now = Date.now();
     const today = new Date(now).setHours(0, 0, 0, 0);
@@ -329,6 +337,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     completeOnboarding,
     addCraving,
     updateCravingOutcome,
+    updateCravingFeedback,
     addCoachMessage,
     clearCoachMessages,
     markMessageHelpCheckComplete,
