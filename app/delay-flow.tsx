@@ -9,7 +9,7 @@ import { useApp } from '@/contexts/AppContext';
 
 export default function DelayFlowScreen() {
   const { cravingId } = useLocalSearchParams<{ cravingId: string }>();
-  const { updateCravingFeedback } = useApp();
+  const { updateCravingFeedback, updateCravingDelayUsed } = useApp();
   const [stage, setStage] = useState<'delay' | 'suggestions' | 'feedback' | 'complete'>('delay');
   const [countdown, setCountdown] = useState<number>(300);
   const [pulseAnim] = useState(new Animated.Value(1));
@@ -51,6 +51,9 @@ export default function DelayFlowScreen() {
   };
 
   const handleSuggestionTap = () => {
+    if (cravingId) {
+      updateCravingDelayUsed(cravingId);
+    }
     setStage('feedback');
   };
 
@@ -210,7 +213,12 @@ export default function DelayFlowScreen() {
       <View style={styles.footer}>
         <TouchableOpacity
           style={styles.continueButton}
-          onPress={() => setStage('suggestions')}
+          onPress={() => {
+            if (cravingId) {
+              updateCravingDelayUsed(cravingId);
+            }
+            setStage('suggestions');
+          }}
         >
           <Text style={styles.continueButtonText}>Continue</Text>
         </TouchableOpacity>

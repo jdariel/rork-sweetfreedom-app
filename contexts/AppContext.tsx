@@ -216,6 +216,14 @@ export const [AppProvider, useApp] = createContextHook(() => {
     saveCravingsMutation.mutate(updated);
   };
 
+  const updateCravingDelayUsed = (id: string) => {
+    const updated = cravings.map(c => 
+      c.id === id ? { ...c, delayUsed: true } : c
+    );
+    setCravings(updated);
+    saveCravingsMutation.mutate(updated);
+  };
+
   const updateStreak = (resisted: boolean) => {
     const now = Date.now();
     const today = new Date(now).setHours(0, 0, 0, 0);
@@ -340,6 +348,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     addCraving,
     updateCravingOutcome,
     updateCravingFeedback,
+    updateCravingDelayUsed,
     addCoachMessage,
     clearCoachMessages,
     markMessageHelpCheckComplete,

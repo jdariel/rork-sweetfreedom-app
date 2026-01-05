@@ -22,7 +22,7 @@ export default function LogCravingScreen() {
       sweetType,
       intensity,
       emotion,
-      delayUsed: true,
+      delayUsed: false,
       notes: notes || undefined,
     };
     
