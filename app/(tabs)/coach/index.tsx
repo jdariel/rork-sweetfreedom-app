@@ -4,6 +4,7 @@ import { useRorkAgent } from '@rork-ai/toolkit-sdk';
 import colors from '@/constants/colors';
 import { Send, Sparkles, Heart, CheckCircle2, MessageCircle } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
+import { classifyMessage, buildSafePrompt } from '@/utils/aiSafetyFilters';
 
 export default function CoachScreen() {
   const [input, setInput] = useState<string>('');
@@ -79,60 +80,34 @@ export default function CoachScreen() {
     if (input.trim()) {
       const userMessage = input.trim();
       
+      const safetyAnalysis = classifyMessage(userMessage);
+      
+      addCoachMessage({ role: 'user', content: userMessage });
+      
+      if (safetyAnalysis.shouldUseFallback && safetyAnalysis.fallbackResponse) {
+        addCoachMessage({ role: 'assistant', content: safetyAnalysis.fallbackResponse, needsHelpCheck: true });
+        setInput('');
+        return;
+      }
+      
       const conversationHistory = coachMessages.map(m => 
         `${m.role === 'user' ? 'User' : 'Coach'}: ${m.content}`
       ).join('\n\n');
       
       const isFirstMessage = coachMessages.length === 0;
       
-      const contextPrompt = `You are Less, a wellness habit coach in the CraveLess app.
-
-IMPORTANT IDENTITY & SCOPE:
-- You are NOT a doctor, therapist, or nutritionist
-- You provide emotional support and habit awareness only
-- NO medical advice, diagnoses, or dietary prescriptions
-- If asked if you're a doctor: "I'm not a medical professional — I'm here to help you build awareness and control around cravings."
-
-YOUR APPROACH:
-- Calm, empathetic, non-judgmental
-- Short, reassuring responses
-- Validate feelings first
-- One small step at a time
-- Never shame or use fear
-- Food is morally neutral
-
-KEY BELIEFS:
-- Cravings are temporary, not failures
-- Awareness beats restriction
-- Delay is often enough
-- Slips are data, not mistakes
-
-CRAVING RESPONSE PATTERN:
-1. Acknowledge: "I see this craving — that's okay."
-2. Ground: "Let's pause for a moment."
-3. Guide: Offer one simple technique
-4. Follow up: "How does it feel now?"
-
-HIGH-SENSITIVITY TOPICS:
-- Diabetes: Stay calm, encourage professional guidance
-- Disordered eating (binge, out of control): NO restriction talk, emphasize safety
-- Mental distress: Validate, reduce pressure, suggest professional help if needed
-
-USER CONTEXT:
-- Goal: ${profile?.goalMode || 'not set'}
-- Cravings logged: ${cravings.length}
-- Resisted: ${cravings.filter(c => c.outcome === 'resisted').length}
-
-${isFirstMessage ? `This is the user's FIRST message in a NEW conversation. Introduce yourself briefly as "Less" and respond to their message.` : `CONVERSATION HISTORY:
-${conversationHistory}
-
-This is an ONGOING conversation. DO NOT introduce yourself again. Just respond naturally to continue the conversation.`}
-
-USER MESSAGE: ${userMessage}
-
-Respond as Less with a natural, conversational reply. Keep it short and focused. ${isFirstMessage ? 'Keep your introduction brief (1-2 sentences max) then address their message.' : 'Continue the conversation naturally without re-introducing yourself.'}`;
+      const contextPrompt = buildSafePrompt(
+        userMessage,
+        safetyAnalysis,
+        conversationHistory,
+        isFirstMessage,
+        {
+          goalMode: profile?.goalMode || 'not set',
+          cravingsLogged: cravings.length,
+          cravingsResisted: cravings.filter(c => c.outcome === 'resisted').length,
+        }
+      );
       
-      addCoachMessage({ role: 'user', content: userMessage });
       setIsStreaming(true);
       setStreamingContent('');
       sendMessage(contextPrompt);
@@ -156,42 +131,27 @@ Respond as Less with a natural, conversational reply. Keep it short and focused.
         setMessages([]);
       }, 500);
     } else {
+      const lastUserMessage = coachMessages
+        .filter(m => m.role === 'user')
+        .slice(-1)[0]?.content || '';
+      
+      const safetyAnalysis = classifyMessage(lastUserMessage);
+      
       const conversationHistory = coachMessages.map(m => 
         `${m.role === 'user' ? 'User' : 'Coach'}: ${m.content}`
       ).join('\n\n');
       
-      const contextPrompt = `You are Less, a wellness habit coach in the CraveLess app.
-
-IMPORTANT IDENTITY & SCOPE:
-- You are NOT a doctor, therapist, or nutritionist
-- You provide emotional support and habit awareness only
-- NO medical advice, diagnoses, or dietary prescriptions
-
-YOUR APPROACH:
-- Calm, empathetic, non-judgmental
-- Short, reassuring responses
-- Validate feelings first
-- One small step at a time
-- Never shame or use fear
-- Food is morally neutral
-
-KEY BELIEFS:
-- Cravings are temporary, not failures
-- Awareness beats restriction
-- Delay is often enough
-- Slips are data, not mistakes
-
-USER CONTEXT:
-- Goal: ${profile?.goalMode || 'not set'}
-- Cravings logged: ${cravings.length}
-- Resisted: ${cravings.filter(c => c.outcome === 'resisted').length}
-
-CONVERSATION HISTORY:
-${conversationHistory}
-
-IMPORTANT: The user clicked "Need more help" after your last response. They need more support on this topic.
-
-Provide a different approach, ask a clarifying question, or offer an alternative perspective. Keep it natural and conversational (2-4 sentences). Reference what was discussed to show continuity.`;
+      const contextPrompt = buildSafePrompt(
+        lastUserMessage,
+        safetyAnalysis,
+        conversationHistory,
+        false,
+        {
+          goalMode: profile?.goalMode || 'not set',
+          cravingsLogged: cravings.length,
+          cravingsResisted: cravings.filter(c => c.outcome === 'resisted').length,
+        }
+      ) + '\n\nIMPORTANT: The user clicked "Need more help" after your last response. They need more support on this topic. Provide a different approach, ask a clarifying question, or offer an alternative perspective. Keep it natural and conversational (2-4 sentences). Reference what was discussed to show continuity.';
       
       setIsStreaming(true);
       setStreamingContent('');
@@ -225,44 +185,27 @@ Provide a different approach, ask a clarifying question, or offer an alternative
                 key={index}
                 style={styles.quickPromptButton}
                 onPress={() => {
-                  const contextPrompt = `You are Less, a wellness habit coach in the CraveLess app.
-
-IMPORTANT IDENTITY & SCOPE:
-- You are NOT a doctor, therapist, or nutritionist
-- You provide emotional support and habit awareness only
-- NO medical advice, diagnoses, or dietary prescriptions
-
-YOUR APPROACH:
-- Calm, empathetic, non-judgmental
-- Short, reassuring responses
-- Validate feelings first
-- One small step at a time
-- Never shame or use fear
-
-KEY BELIEFS:
-- Cravings are temporary, not failures
-- Awareness beats restriction
-- Delay is often enough
-- Slips are data, not mistakes
-
-CRAVING RESPONSE PATTERN:
-1. Acknowledge: "I see this craving — that's okay."
-2. Ground: "Let's pause for a moment."
-3. Guide: Offer one simple technique
-4. Follow up: "How does it feel now?"
-
-USER CONTEXT:
-- Goal: ${profile?.goalMode || 'not set'}
-- Cravings logged: ${cravings.length}
-- Resisted: ${cravings.filter(c => c.outcome === 'resisted').length}
-
-This is the user's FIRST message in a NEW conversation. Introduce yourself briefly as "Less" (1-2 sentences) then respond to their message.
-
-USER MESSAGE: ${prompt}
-
-Respond as Less with a natural, conversational reply. Keep it short and focused. Keep your introduction brief then address their message.`;
+                  const safetyAnalysis = classifyMessage(prompt);
                   
                   addCoachMessage({ role: 'user', content: prompt });
+                  
+                  if (safetyAnalysis.shouldUseFallback && safetyAnalysis.fallbackResponse) {
+                    addCoachMessage({ role: 'assistant', content: safetyAnalysis.fallbackResponse, needsHelpCheck: true });
+                    return;
+                  }
+                  
+                  const contextPrompt = buildSafePrompt(
+                    prompt,
+                    safetyAnalysis,
+                    '',
+                    true,
+                    {
+                      goalMode: profile?.goalMode || 'not set',
+                      cravingsLogged: cravings.length,
+                      cravingsResisted: cravings.filter(c => c.outcome === 'resisted').length,
+                    }
+                  );
+                  
                   setIsStreaming(true);
                   setStreamingContent('');
                   sendMessage(contextPrompt);
