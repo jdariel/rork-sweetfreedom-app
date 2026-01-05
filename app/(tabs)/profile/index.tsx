@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useApp } from '@/contexts/AppContext';
 import { goalModeData } from '@/constants/goalModes';
 import colors from '@/constants/colors';
-import { User, Target, Calendar, Award } from 'lucide-react-native';
+import { User, Target, Calendar, Award, AlertCircle, ExternalLink } from 'lucide-react-native';
 
 export default function ProfileScreen() {
   const { profile, streak } = useApp();
@@ -84,6 +84,36 @@ export default function ProfileScreen() {
             <Text style={styles.tipItem}>• Chat with your AI coach when you need support</Text>
             <Text style={styles.tipItem}>• Celebrate small wins and learn from setbacks</Text>
             <Text style={styles.tipItem}>• Track patterns to understand your triggers</Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Health & Safety</Text>
+          <View style={styles.disclaimerCard}>
+            <View style={styles.disclaimerHeader}>
+              <AlertCircle size={20} color={colors.secondary} />
+              <Text style={styles.disclaimerTitle}>Important Notice</Text>
+            </View>
+            <Text style={styles.disclaimerText}>
+              CraveLess provides habit and wellness support. It is not medical or nutritional advice.
+            </Text>
+            <Text style={[styles.disclaimerText, { marginTop: 12 }]}>
+              For health concerns, please consult:
+            </Text>
+            <View style={styles.resourceList}>
+              <View style={styles.resourceItem}>
+                <ExternalLink size={14} color={colors.primary} />
+                <Text style={styles.resourceText}>Healthcare provider or registered dietitian</Text>
+              </View>
+              <View style={styles.resourceItem}>
+                <ExternalLink size={14} color={colors.primary} />
+                <Text style={styles.resourceText}>Mental health professional</Text>
+              </View>
+              <View style={styles.resourceItem}>
+                <ExternalLink size={14} color={colors.primary} />
+                <Text style={styles.resourceText}>Crisis services: 988 (US)</Text>
+              </View>
+            </View>
           </View>
         </View>
       </ScrollView>
@@ -233,5 +263,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textSecondary,
     lineHeight: 28,
+  },
+  disclaimerCard: {
+    backgroundColor: colors.calm.peachLight,
+    borderRadius: 16,
+    padding: 20,
+  },
+  disclaimerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  disclaimerTitle: {
+    fontSize: 16,
+    fontWeight: '700' as const,
+    color: colors.text,
+    marginLeft: 8,
+  },
+  disclaimerText: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  resourceList: {
+    marginTop: 12,
+    gap: 8,
+  },
+  resourceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  resourceText: {
+    fontSize: 13,
+    color: colors.primaryDark,
+    lineHeight: 18,
+    flex: 1,
   },
 });
