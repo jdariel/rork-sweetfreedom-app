@@ -215,11 +215,15 @@ function getCrisisFallback(): string {
 
 I can't support you through this alone — you deserve real help right now.
 
-If you can, please reach out to:
-• Emergency services (911 in the US)
-• Crisis Text Line: Text HOME to 741741
-• National Suicide Prevention Lifeline: 988
-• Or a trusted person immediately
+Please reach out immediately:
+• Contact emergency services in your country
+• Call a local crisis hotline
+• Reach out to a trusted person
+
+If you're in the US:
+• Call or text 988 (Suicide & Crisis Lifeline)
+• Text HOME to 741741 (Crisis Text Line)
+• Call 911 for emergencies
 
 Your safety matters most.`;
 }
