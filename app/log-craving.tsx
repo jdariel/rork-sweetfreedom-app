@@ -26,10 +26,9 @@ export default function LogCravingScreen() {
       notes: notes || undefined,
     };
     
-    const cravingId = `${Date.now()}-${Math.random()}`;
-    addCraving(newCraving);
+    const createdCraving = addCraving(newCraving);
 
-    router.replace(`/delay-flow?cravingId=${cravingId}`);
+    router.replace(`/delay-flow?cravingId=${createdCraving.id}`);
   };
 
   return (

@@ -175,7 +175,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     saveProfileMutation.mutate(newProfile);
   };
 
-  const addCraving = (craving: Omit<Craving, 'id' | 'timestamp'>) => {
+  const addCraving = (craving: Omit<Craving, 'id' | 'timestamp'>): Craving => {
     const newCraving: Craving = {
       ...craving,
       id: `${Date.now()}-${Math.random()}`,
@@ -190,6 +190,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
     } else if (craving.outcome === 'gave-in') {
       updateStreak(false);
     }
+
+    return newCraving;
   };
 
   const updateCravingOutcome = (id: string, outcome: CravingOutcome) => {
