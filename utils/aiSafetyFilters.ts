@@ -338,6 +338,121 @@ function getGeneralSupportInstructions(): string {
 - Stay within scope (habit awareness, not medical advice)`;
 }
 
+function getTimeOfDayContext(): string {
+  const hour = new Date().getHours();
+  
+  if (hour >= 5 && hour < 12) {
+    return `TIME: Morning (${hour}:00)
+- Fresh start energy, new day mindset
+- Common triggers: breakfast sweets, coffee shop temptations
+- Tone: Energizing, optimistic, "you've got this today" vibe
+- Techniques: Set intentions, plan ahead for afternoon cravings`;
+  } else if (hour >= 12 && hour < 17) {
+    return `TIME: Afternoon (${hour}:00)
+- Post-lunch energy dip, stress from work
+- Common triggers: 3pm slump, vending machines, office treats
+- Tone: Supportive, grounding, "let's take a breath" vibe
+- Techniques: Quick walks, hydration, short delays`;
+  } else if (hour >= 17 && hour < 22) {
+    return `TIME: Evening (${hour}:00)
+- Winding down, transition from work, family time
+- Common triggers: After-dinner dessert habits, TV snacking, reward mentality
+- Tone: Calm, reflective, "you made it through the day" vibe
+- Techniques: Alternative rewards, evening routines, stress release`;
+  } else {
+    return `TIME: Late Night (${hour}:00)
+- Sleep-related stress, emotional vulnerability, fatigue
+- Common triggers: Boredom, loneliness, anxiety, sleep procrastination
+- Tone: Extra gentle, minimal pressure, "rest is important" vibe
+- Techniques: Focus on sleep hygiene, emotional soothing, compassion`;
+  }
+}
+
+function getGoalModeGuidance(goalMode: string): string {
+  switch (goalMode) {
+    case 'quit':
+      return `GOAL MODE: Quit Sugar
+- User wants complete elimination of added sugars
+- Frame delays as "protecting your commitment"
+- Emphasize identity shift: "I don't eat sugar" vs "I can't"
+- Celebrate clean days strongly
+- When slips happen: "This doesn't erase your decision"`;
+    
+    case 'reduce':
+      return `GOAL MODE: Reduce Gradually
+- User is cutting back step-by-step, not eliminating
+- Small portions are SUCCESS, not failure
+- Track reduction trends, not perfection
+- Frame: "You're building flexibility, not restriction"
+- Celebrate progress like "3 times this week vs 7 last week"`;
+    
+    case 'weight-loss':
+      return `GOAL MODE: Weight Loss (HIGH SENSITIVITY)
+- CRITICAL: Extra careful about disordered eating language
+- NEVER mention calories, weight numbers, or body size
+- Frame sugar control as energy/clarity, not weight
+- Focus: "How do you feel after eating sweets?" not "will this make you gain weight"
+- If they mention weight frustration: redirect to non-scale victories
+- Keep it about habits, never about body`;
+    
+    case 'diabetes':
+      return `GOAL MODE: Diabetes Management (MEDICAL BOUNDARY)
+- User has a medical condition - stay in scope
+- Acknowledge: "Health conditions make cravings feel more serious"
+- Always defer: "Follow your provider's guidance on what to eat"
+- Focus on: Stress reduction, craving awareness, delay techniques
+- NO specific food advice or blood sugar claims
+- Frame: "Managing the urge" not "managing diabetes"`;
+    
+    case 'habit-control':
+      return `GOAL MODE: Habit Control (EMOTIONAL FOCUS)
+- User wants to break emotional eating patterns
+- This is about feelings, not food
+- Ask: "What emotion is under this craving?"
+- Techniques: Journaling, emotional awareness, trigger mapping
+- Celebrate: "You noticed the pattern" not just "you resisted"
+- Focus: Building awareness and alternative coping skills`;
+    
+    default:
+      return `GOAL MODE: Not set
+- Approach with general craving support
+- Help user explore their "why" for managing cravings`;
+  }
+}
+
+function getVariationGuidance(conversationHistory: string): string {
+  const recentMessages = conversationHistory.toLowerCase();
+  const usedPhrases: string[] = [];
+  
+  if (recentMessages.includes('take a breath') || recentMessages.includes('breathe')) {
+    usedPhrases.push('breathing');
+  }
+  if (recentMessages.includes('pause') || recentMessages.includes('wait')) {
+    usedPhrases.push('pausing');
+  }
+  if (recentMessages.includes('temporary') || recentMessages.includes('will pass')) {
+    usedPhrases.push('temporary nature');
+  }
+  if (recentMessages.includes('walk') || recentMessages.includes('move')) {
+    usedPhrases.push('physical movement');
+  }
+  if (recentMessages.includes('drink water') || recentMessages.includes('hydrate')) {
+    usedPhrases.push('hydration');
+  }
+  
+  if (usedPhrases.length === 0) {
+    return `VARIATION: First interaction - use any techniques naturally.`;
+  }
+  
+  return `VARIATION GUIDANCE (AVOID REPETITION):
+- You've recently used these approaches: ${usedPhrases.join(', ')}
+- Try a DIFFERENT technique this time
+- Vary your opening: Don't always say "I hear you" or "That makes sense"
+- Alternative techniques: sensory grounding (5 things you see), urge surfing, future self visualization, tracking intensity, identifying specific triggers, replacement activities
+- Mix up your language: Sometimes ask questions, sometimes give statements, sometimes offer choices
+- Don't repeat the same structure: Acknowledge → Technique → Encouragement gets stale`;
+}
+
 export function buildSafePrompt(
   userMessage: string,
   analysis: SafetyAnalysis,
@@ -377,11 +492,20 @@ CORE BELIEFS:
 - Habits change gradually
 - Safety over streaks`;
 
+  const timeContext = getTimeOfDayContext();
+  const goalGuidance = getGoalModeGuidance(userContext.goalMode);
+  const variationGuidance = getVariationGuidance(conversationHistory);
+  
   const contextSection = `
 USER CONTEXT:
-- Goal: ${userContext.goalMode}
 - Cravings logged: ${userContext.cravingsLogged}
-- Resisted: ${userContext.cravingsResisted}`;
+- Resisted: ${userContext.cravingsResisted}
+
+${goalGuidance}
+
+${timeContext}
+
+${variationGuidance}`;
 
   const conversationSection = isFirstMessage 
     ? `This is the user's FIRST message in a NEW conversation. Introduce yourself briefly as "Less" (1-2 sentences max) then respond to their message.`
