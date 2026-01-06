@@ -61,7 +61,10 @@ export default function LogCravingScreen() {
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
+        onStartShouldSetPanResponderCapture: () => true,
         onMoveShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponderCapture: () => true,
+        onPanResponderTerminationRequest: () => false,
         onPanResponderGrant: () => {
           setIsDragging(true);
           if (Platform.OS !== 'web') {
@@ -69,7 +72,7 @@ export default function LogCravingScreen() {
           }
         },
         onPanResponderMove: (_, gestureState) => {
-          const newValue = Math.max(0, Math.min(1, dragValue - gestureState.dy / 200));
+          const newValue = Math.max(0, Math.min(1, dragValue - gestureState.dy / 120));
           setDragValue(newValue);
           intensityAnim.setValue(newValue);
           glowIntensity.setValue(newValue);
@@ -169,8 +172,8 @@ export default function LogCravingScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>How loud is it right now?</Text>
-          <View style={styles.intensityContainer}>
-            <View style={styles.intensityDragContainer} {...panResponder.panHandlers}>
+          <View style={styles.intensityContainer} {...panResponder.panHandlers}>
+            <View style={styles.intensityDragContainer}>
               <Animated.View
                 style={[
                   styles.intensityOrb,
@@ -334,18 +337,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 32,
+    minHeight: 300,
   },
   intensityDragContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 20,
   },
   intensityOrb: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 24,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
@@ -367,6 +372,7 @@ const styles = StyleSheet.create({
   intensityHint: {
     fontSize: 14,
     color: colors.textLight,
+    fontWeight: '500' as const,
   },
   smartDefaultHint: {
     fontSize: 13,
