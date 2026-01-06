@@ -53,8 +53,10 @@ export default function HomeScreen() {
     };
   }, [showBreathing, totalTime, breathingPhase, phaseTimer]);
 
-  const handleTap = async () => {
-    await clearCoachConversation();
+  const handleTap = () => {
+    clearCoachConversation().catch(err => 
+      console.error('[Home] Failed to clear coach conversation:', err)
+    );
     router.push('/coach');
   };
 
