@@ -44,12 +44,12 @@ export default function CircleButton({ onPress, onLongPress, size = 280 }: Circl
           Animated.timing(glowAnim, {
             toValue: 0.5,
             duration: 3000,
-            useNativeDriver: false,
+            useNativeDriver: true,
           }),
           Animated.timing(glowAnim, {
             toValue: 0.3,
             duration: 3000,
-            useNativeDriver: false,
+            useNativeDriver: true,
           }),
         ]),
       ])
