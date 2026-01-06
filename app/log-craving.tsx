@@ -18,6 +18,7 @@ export default function LogCravingScreen() {
   const [intensityAnim] = useState(new Animated.Value(0.5));
   const [glowIntensity] = useState(new Animated.Value(0.5));
   const [dragValue, setDragValue] = useState(0.5);
+  const [isDragging, setIsDragging] = useState(false);
 
   const smartDefaults = useMemo(() => {
     if (cravings.length === 0) return { emotion: null, sweetType: null, intensity: 5 };
@@ -62,6 +63,7 @@ export default function LogCravingScreen() {
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
         onPanResponderGrant: () => {
+          setIsDragging(true);
           if (Platform.OS !== 'web') {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           }
@@ -80,6 +82,7 @@ export default function LogCravingScreen() {
           }
         },
         onPanResponderRelease: () => {
+          setIsDragging(false);
           if (Platform.OS !== 'web') {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           }
@@ -130,7 +133,11 @@ export default function LogCravingScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent} 
+        showsVerticalScrollIndicator={false}
+        scrollEnabled={!isDragging}
+      >
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>What&apos;s calling to you?</Text>
           <View style={styles.optionsGrid}>
