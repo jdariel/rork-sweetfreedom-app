@@ -78,15 +78,20 @@ export const [AppProvider, useApp] = createContextHook(() => {
     queryFn: async () => {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.PROFILE);
-        if (!stored || stored === 'undefined' || stored === 'null') return null;
+        if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') return null;
         const parsed = JSON.parse(stored);
+        if (typeof parsed !== 'object' || parsed === null) {
+          await AsyncStorage.removeItem(STORAGE_KEYS.PROFILE);
+          return null;
+        }
         return parsed;
       } catch (error) {
         console.error('Error parsing profile:', error);
         await AsyncStorage.removeItem(STORAGE_KEYS.PROFILE);
         return null;
       }
-    }
+    },
+    retry: false,
   });
 
   const cravingsQuery = useQuery({
@@ -94,7 +99,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     queryFn: async () => {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.CRAVINGS);
-        if (!stored || stored === 'undefined' || stored === 'null') return [];
+        if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') return [];
         const parsed = JSON.parse(stored);
         return Array.isArray(parsed) ? parsed : [];
       } catch (error) {
@@ -102,7 +107,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
         await AsyncStorage.removeItem(STORAGE_KEYS.CRAVINGS);
         return [];
       }
-    }
+    },
+    retry: false,
   });
 
   const streakQuery = useQuery({
@@ -110,7 +116,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     queryFn: async () => {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.STREAK);
-        if (!stored || stored === 'undefined' || stored === 'null') return { current: 0, longest: 0, lastCravingDate: null };
+        if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') return { current: 0, longest: 0, lastCravingDate: null };
         const parsed = JSON.parse(stored);
         return parsed;
       } catch (error) {
@@ -118,7 +124,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
         await AsyncStorage.removeItem(STORAGE_KEYS.STREAK);
         return { current: 0, longest: 0, lastCravingDate: null };
       }
-    }
+    },
+    retry: false,
   });
 
   const calmMomentumQuery = useQuery({
@@ -126,7 +133,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     queryFn: async () => {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.CALM_MOMENTUM);
-        if (!stored || stored === 'undefined' || stored === 'null') {
+        if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') {
           return { totalPausesCompleted: 0, momentumState: 'active' as const };
         }
         const parsed = JSON.parse(stored);
@@ -136,7 +143,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
         await AsyncStorage.removeItem(STORAGE_KEYS.CALM_MOMENTUM);
         return { totalPausesCompleted: 0, momentumState: 'active' as const };
       }
-    }
+    },
+    retry: false,
   });
 
   const coachMessagesQuery = useQuery({
@@ -144,7 +152,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     queryFn: async () => {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.COACH_MESSAGES);
-        if (!stored || stored === 'undefined' || stored === 'null') return [];
+        if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') return [];
         const parsed = JSON.parse(stored);
         return Array.isArray(parsed) ? parsed : [];
       } catch (error) {
@@ -152,7 +160,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
         await AsyncStorage.removeItem(STORAGE_KEYS.COACH_MESSAGES);
         return [];
       }
-    }
+    },
+    retry: false,
   });
 
   const rewardsQuery = useQuery({
@@ -160,7 +169,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     queryFn: async () => {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.REWARDS);
-        if (!stored || stored === 'undefined' || stored === 'null') return [];
+        if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') return [];
         const parsed = JSON.parse(stored);
         return Array.isArray(parsed) ? parsed : [];
       } catch (error) {
@@ -168,7 +177,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
         await AsyncStorage.removeItem(STORAGE_KEYS.REWARDS);
         return [];
       }
-    }
+    },
+    retry: false,
   });
 
   useEffect(() => {

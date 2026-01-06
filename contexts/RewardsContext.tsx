@@ -34,17 +34,22 @@ export const [RewardsProvider, useRewards] = createContextHook(() => {
     queryFn: async () => {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        if (!stored || stored === 'undefined' || stored === 'null') {
+        if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') {
           return createDefaultRewardsState();
         }
         const parsed = JSON.parse(stored);
+        if (typeof parsed !== 'object' || parsed === null) {
+          await AsyncStorage.removeItem(STORAGE_KEY);
+          return createDefaultRewardsState();
+        }
         return parsed;
       } catch (error) {
         console.error('Error parsing rewards state:', error);
         await AsyncStorage.removeItem(STORAGE_KEY);
         return createDefaultRewardsState();
       }
-    }
+    },
+    retry: false,
   });
 
   const saveRewardsMutation = useMutation({
