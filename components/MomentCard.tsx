@@ -90,12 +90,12 @@ export default function MomentCard({ craving, showDetails = false }: MomentCardP
 
   const progressTag = useMemo(() => {
     if (cardState === 'settled') {
-      if (craving.outcome === 'resisted') return 'Resisted';
-      if (craving.outcome === 'small-portion') return 'Mindful Choice';
-      if (craving.outcome === 'gave-in') return 'Learning Data';
+      if (craving.outcome === 'resisted') return 'Paused';
+      if (craving.outcome === 'small-portion') return 'Reflected';
+      if (craving.outcome === 'gave-in') return 'Learning moment';
     }
-    if (cardState === 'cooling') return 'Cooling Down';
-    return 'Active Moment';
+    if (cardState === 'cooling') return 'Pausing';
+    return 'Active';
   }, [cardState, craving.outcome]);
 
   const intensityDrop = useMemo(() => {
@@ -184,20 +184,20 @@ export default function MomentCard({ craving, showDetails = false }: MomentCardP
           {craving.outcome === 'resisted' && (
             <>
               <ThumbsUp size={18} color={colors.success} />
-              <Text style={[styles.outcomeText, { color: colors.success }]}>Victory!</Text>
+              <Text style={[styles.outcomeText, { color: colors.success }]}>That counts.</Text>
             </>
           )}
           {craving.outcome === 'small-portion' && (
             <>
               <Smile size={18} color={colors.warning} />
-              <Text style={[styles.outcomeText, { color: colors.warning }]}>Mindful</Text>
+              <Text style={[styles.outcomeText, { color: colors.warning }]}>You showed up.</Text>
             </>
           )}
           {craving.outcome === 'gave-in' && (
             <>
               <Brain size={18} color={colors.textSecondary} />
               <Text style={[styles.outcomeText, { color: colors.textSecondary }]}>
-                Data collected
+                Moment handled.
               </Text>
             </>
           )}

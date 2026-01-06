@@ -197,12 +197,12 @@ export default function DelayFlowScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.header}>
-          <Text style={styles.title}>What Happened?</Text>
+          <Text style={styles.title}>What happened after?</Text>
         </View>
 
         <View style={styles.outcomeContainer}>
           <Text style={styles.outcomeSubtitle}>
-            Let&apos;s record what happened. This helps track your progress.
+            All three move you forward.
           </Text>
 
           <TouchableOpacity
@@ -218,8 +218,8 @@ export default function DelayFlowScreen() {
               <ThumbsUp size={32} color={colors.success} />
             </View>
             <View style={styles.outcomeTextContainer}>
-              <Text style={styles.outcomeTitle}>Resisted</Text>
-              <Text style={styles.outcomeDescription}>I didn&apos;t give in to the craving</Text>
+              <Text style={styles.outcomeTitle}>I didn&apos;t eat it</Text>
+              <Text style={styles.outcomeDescription}>Resisted the craving</Text>
             </View>
           </TouchableOpacity>
 
@@ -236,8 +236,8 @@ export default function DelayFlowScreen() {
               <Smile size={32} color={colors.warning} />
             </View>
             <View style={styles.outcomeTextContainer}>
-              <Text style={styles.outcomeTitle}>Small Portion</Text>
-              <Text style={styles.outcomeDescription}>I had a little bit mindfully</Text>
+              <Text style={styles.outcomeTitle}>I had a small amount</Text>
+              <Text style={styles.outcomeDescription}>Mindful choice</Text>
             </View>
           </TouchableOpacity>
 
@@ -254,8 +254,8 @@ export default function DelayFlowScreen() {
               <Brain size={32} color={colors.textSecondary} />
             </View>
             <View style={styles.outcomeTextContainer}>
-              <Text style={styles.outcomeTitle}>Gave In</Text>
-              <Text style={styles.outcomeDescription}>Learning data - no judgment</Text>
+              <Text style={styles.outcomeTitle}>I ate it — learning moment</Text>
+              <Text style={styles.outcomeDescription}>Data collected, no judgment</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -270,8 +270,8 @@ export default function DelayFlowScreen() {
           <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
             <CheckCircle size={80} color={colors.success} />
           </Animated.View>
-          <Text style={styles.completeTitle}>Great Job!</Text>
-          <Text style={styles.completeSubtitle}>You took a moment for yourself</Text>
+          <Text style={styles.completeTitle}>Moment handled.</Text>
+          <Text style={styles.completeSubtitle}>That counts.</Text>
         </View>
       </SafeAreaView>
     );
@@ -344,7 +344,7 @@ export default function DelayFlowScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={styles.header}>
-          <Text style={styles.title}>Quick Check-In</Text>
+          <Text style={styles.title}>Nice. Check in with yourself.</Text>
           <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
             <X size={24} color={colors.text} />
           </TouchableOpacity>
@@ -412,7 +412,7 @@ export default function DelayFlowScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Take a Moment</Text>
+        <Text style={styles.title}>Stay with this for a moment</Text>
         <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
           <X size={24} color={colors.text} />
         </TouchableOpacity>
@@ -443,9 +443,9 @@ export default function DelayFlowScreen() {
 
         <View style={styles.breathingInstructions}>
           <Text style={styles.breathingPhaseText}>
-            {breathingPhase === 'inhale' && 'Breathe In...'}
+            {breathingPhase === 'inhale' && 'Inhale...'}
             {breathingPhase === 'hold' && 'Hold...'}
-            {breathingPhase === 'exhale' && 'Breathe Out...'}
+            {breathingPhase === 'exhale' && 'Exhale...'}
             {breathingPhase === 'rest' && 'Rest...'}
           </Text>
           <Text style={styles.breathingCycleText}>
@@ -459,7 +459,7 @@ export default function DelayFlowScreen() {
         </View>
 
         <Text style={styles.delaySubtitle}>
-          Hold the circle and breathe with it.{'\n'}Each second you hold adds to your control.
+          Hold the circle and breathe with it.{'\n'}Stay present with this moment.
         </Text>
       </View>
 

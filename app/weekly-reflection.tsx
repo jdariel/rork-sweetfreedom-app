@@ -222,42 +222,42 @@ export default function WeeklyReflectionScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.introSection}>
           <Sparkles size={40} color={colors.secondary} />
-          <Text style={styles.introTitle}>Your Week in Review</Text>
+          <Text style={styles.introTitle}>Weekly Deck</Text>
           <Text style={styles.introSubtitle}>
-            {weeklyInsight.totalMoments} moments tracked this week
+            {weeklyInsight.totalMoments} moments this week
           </Text>
           <Text style={styles.introDescription}>
-            Flip each card to discover insights and suggestions for next week
+            Tap each card to see what patterns emerged and what to try next
           </Text>
         </View>
 
         <View style={styles.cardsContainer}>
           <FlippableCard
-            title="Top Emotions"
+            title="Your Main Trigger"
             frontContent={
               weeklyInsight.topEmotions.length > 0
-                ? weeklyInsight.topEmotions.map(([emotion]) => emotion).join(' & ')
-                : 'Various'
+                ? `Most moments started with: ${weeklyInsight.topEmotions.map(([emotion]) => emotion).join(' & ')}`
+                : 'Various emotions'
             }
-            backContent={`Try preparing for ${weeklyInsight.topEmotions[0]?.[0] || 'emotional'} moments with a quick pause ritual`}
+            backContent={`Next time ${weeklyInsight.topEmotions[0]?.[0] || 'this emotion'} shows up, try a 60-second pause first.`}
             icon={<Smile size={32} color={colors.secondary} />}
             isFlipped={flippedCards.has(0)}
             onFlip={() => toggleCardFlip(0)}
           />
 
           <FlippableCard
-            title="Peak Craving Time"
-            frontContent={weeklyInsight.peakTime}
-            backContent={`Schedule a calming activity before ${weeklyInsight.peakTime.toLowerCase()} to stay ahead`}
+            title="Your Peak Time"
+            frontContent={`Peak moment time: ${weeklyInsight.peakTime}`}
+            backContent={`Let's plan a tiny reset at ${weeklyInsight.peakTime.toLowerCase()}: breathe, stretch, or step outside.`}
             icon={<Clock size={32} color={colors.primary} />}
             isFlipped={flippedCards.has(1)}
             onFlip={() => toggleCardFlip(1)}
           />
 
           <FlippableCard
-            title="What Helped Most"
-            frontContent={weeklyInsight.whatHelpedMost.charAt(0).toUpperCase() + weeklyInsight.whatHelpedMost.slice(1)}
-            backContent={`Keep using ${weeklyInsight.whatHelpedMost} - it's working well for you!`}
+            title="What Helped"
+            frontContent={`The biggest calm-maker: ${weeklyInsight.whatHelpedMost.charAt(0).toUpperCase() + weeklyInsight.whatHelpedMost.slice(1)}`}
+            backContent={`Let's use ${weeklyInsight.whatHelpedMost} sooner next time — before the craving gets loud.`}
             icon={<Heart size={32} color={colors.success} />}
             isFlipped={flippedCards.has(2)}
             onFlip={() => toggleCardFlip(2)}
@@ -267,7 +267,7 @@ export default function WeeklyReflectionScreen() {
             <FlippableCard
               title="Intensity Drop"
               frontContent={`-${weeklyInsight.avgIntensityDrop} points average`}
-              backContent="Your pauses are reducing craving intensity. Keep practicing!"
+              backContent="That tool works. Keep it simple."
               icon={<TrendingDown size={32} color={colors.success} />}
               isFlipped={flippedCards.has(3)}
               onFlip={() => toggleCardFlip(3)}

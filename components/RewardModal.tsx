@@ -108,8 +108,8 @@ export default function RewardModal({ reward, visible, onDismiss }: RewardModalP
             </Animated.View>
           </View>
 
-          <Text style={styles.title}>Surprise!</Text>
-          <Text style={styles.subtitle}>You unlocked something new</Text>
+          <Text style={styles.title}>Tiny unlock ✨</Text>
+          <Text style={styles.subtitle}>You showed up today. That&apos;s worth celebrating.</Text>
 
           <View style={styles.rewardCard}>
             <Text style={styles.rewardIcon}>{reward.unlockable.icon}</Text>
@@ -126,11 +126,11 @@ export default function RewardModal({ reward, visible, onDismiss }: RewardModalP
             style={styles.continueButton}
             onPress={onDismiss}
           >
-            <Text style={styles.continueButtonText}>Awesome!</Text>
+            <Text style={styles.continueButtonText}>Try it now</Text>
           </TouchableOpacity>
 
           <Text style={styles.footerText}>
-            Keep engaging with your moments to unlock more
+            Rewards are for pausing + reflecting — not for restricting food.
           </Text>
         </Animated.View>
       </View>
