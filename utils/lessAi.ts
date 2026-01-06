@@ -153,6 +153,8 @@ export async function getLessAiReplyWithRetry(params: {
   
   try {
     console.log('[Less AI] Sending request to AI...');
+    console.log('[Less AI] Toolkit URL:', process.env.EXPO_PUBLIC_TOOLKIT_URL);
+    
     const response = await generateText({ messages: [{ role: 'user', content: prompt }] });
     console.log('[Less AI] Received response:', response.substring(0, 200));
     
@@ -225,6 +227,23 @@ export async function getLessAiReplyWithRetry(params: {
     }
   } catch (error) {
     console.error('[Less AI] Error in AI call:', error);
-    return getSafeFallback(userMessage);
+    console.error('[Less AI] Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      name: error instanceof Error ? error.name : 'Unknown',
+    });
+    
+    return {
+      assistantMessage: "I'm having trouble connecting right now. Let me offer some quick support:\n\nWant to try a 60-second pause? Sometimes slowing down for a minute helps the moment feel less urgent.\n\nI'll be here when you're ready to talk.",
+      classification: 'normal',
+      quickActions: ['start_pause', 'log_intensity'],
+      memoryUpdates: {
+        goalMode: null,
+        addTriggers: [],
+        addSweetPreferences: [],
+        addPeakTimes: [],
+        tonePreference: null,
+        distressFlag: false,
+      },
+    };
   }
 }
