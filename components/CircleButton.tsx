@@ -64,7 +64,7 @@ export default function CircleButton({ onPress, onLongPress, size = 280 }: Circl
 
 
 
-  const longPressTimerRef = useRef<number | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isLongPressing, setIsLongPressing] = useState(false);
 
   const handlePressInCustom = () => {

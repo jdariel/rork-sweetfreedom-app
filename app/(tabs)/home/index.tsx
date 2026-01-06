@@ -16,7 +16,7 @@ export default function HomeScreen() {
   const [phaseTimer, setPhaseTimer] = useState(4);
   const [totalTime, setTotalTime] = useState(60);
   const [hasCheckedComeback, setHasCheckedComeback] = useState(false);
-  const breathingTimerRef = useRef<number | null>(null);
+  const breathingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!hasCheckedComeback) {
