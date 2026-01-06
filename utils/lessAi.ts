@@ -58,15 +58,30 @@ RESPONSE QUALITY
 function extractJsonFromText(text: string): string | null {
   const trimmed = text.trim();
   
-  const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    let jsonStr = jsonMatch[0];
-    const firstBrace = jsonStr.indexOf('{');
-    const lastBrace = jsonStr.lastIndexOf('}');
-    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-      jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+  const codeBlockMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch) {
+    return codeBlockMatch[1].trim();
+  }
+  
+  let depth = 0;
+  let startIndex = -1;
+  let endIndex = -1;
+  
+  for (let i = 0; i < trimmed.length; i++) {
+    if (trimmed[i] === '{') {
+      if (depth === 0) startIndex = i;
+      depth++;
+    } else if (trimmed[i] === '}') {
+      depth--;
+      if (depth === 0 && startIndex !== -1) {
+        endIndex = i;
+        break;
+      }
     }
-    return jsonStr;
+  }
+  
+  if (startIndex !== -1 && endIndex !== -1) {
+    return trimmed.substring(startIndex, endIndex + 1);
   }
   
   return null;
@@ -162,6 +177,7 @@ export async function getLessAiReplyWithRetry(params: {
     
     if (!jsonStr) {
       console.warn('[Less AI] No JSON found in response, attempting retry...');
+      console.log('[Less AI] Raw response that failed:', response.substring(0, 500));
       
       const retryPrompt = `${prompt}\n\n[SYSTEM: Previous response was not valid JSON. Return ONLY valid JSON matching the schema. No markdown, no extra text.]`;
       
@@ -170,20 +186,35 @@ export async function getLessAiReplyWithRetry(params: {
       
       if (!retryJsonStr) {
         console.error('[Less AI] Retry failed, using fallback');
+        console.log('[Less AI] Retry response:', retryResponse.substring(0, 500));
         return getSafeFallback(userMessage);
       }
       
-      const retryParsed = JSON.parse(retryJsonStr);
-      if (validateLessAiResult(retryParsed)) {
-        console.log('[Less AI] Retry successful');
-        return retryParsed;
-      } else {
-        console.error('[Less AI] Retry validation failed, using fallback');
+      try {
+        const retryParsed = JSON.parse(retryJsonStr);
+        if (validateLessAiResult(retryParsed)) {
+          console.log('[Less AI] Retry successful');
+          return retryParsed;
+        } else {
+          console.error('[Less AI] Retry validation failed, using fallback');
+          return getSafeFallback(userMessage);
+        }
+      } catch (parseError) {
+        console.error('[Less AI] Retry JSON parse error:', parseError);
+        console.log('[Less AI] Failed to parse:', retryJsonStr.substring(0, 300));
         return getSafeFallback(userMessage);
       }
     }
     
-    const parsed = JSON.parse(jsonStr);
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch (parseError) {
+      console.error('[Less AI] JSON parse error:', parseError);
+      console.log('[Less AI] Failed to parse JSON string:', jsonStr.substring(0, 300));
+      console.log('[Less AI] Original response:', response.substring(0, 500));
+      return getSafeFallback(userMessage);
+    }
     
     if (validateLessAiResult(parsed)) {
       console.log('[Less AI] Valid response received, classification:', parsed.classification);
