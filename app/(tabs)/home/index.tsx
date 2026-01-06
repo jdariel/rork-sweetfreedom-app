@@ -8,10 +8,12 @@ import CircleButton from '@/components/CircleButton';
 
 export default function HomeScreen() {
   const { pendingReward, dismissReward, addXP, clearCoachConversation } = useApp();
-  const [showQuickPause, setShowQuickPause] = useState(false);
-  const [pauseCountdown, setPauseCountdown] = useState(60);
+  const [showBreathing, setShowBreathing] = useState(false);
+  const [breathingPhase, setBreathingPhase] = useState<'inhale' | 'hold' | 'exhale'>('inhale');
+  const [phaseTimer, setPhaseTimer] = useState(4);
+  const [totalTime, setTotalTime] = useState(60);
   const [hasCheckedComeback, setHasCheckedComeback] = useState(false);
-  const countdownTimerRef = useRef<number | null>(null);
+  const breathingTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!hasCheckedComeback) {
@@ -21,17 +23,32 @@ export default function HomeScreen() {
   }, [hasCheckedComeback, addXP]);
 
   useEffect(() => {
-    if (showQuickPause && pauseCountdown > 0) {
-      countdownTimerRef.current = setTimeout(() => {
-        setPauseCountdown((prev) => prev - 1);
+    if (showBreathing && totalTime > 0) {
+      breathingTimerRef.current = setTimeout(() => {
+        setTotalTime((prev) => prev - 1);
+        setPhaseTimer((prev) => {
+          if (prev <= 1) {
+            if (breathingPhase === 'inhale') {
+              setBreathingPhase('hold');
+              return 4;
+            } else if (breathingPhase === 'hold') {
+              setBreathingPhase('exhale');
+              return 4;
+            } else {
+              setBreathingPhase('inhale');
+              return 4;
+            }
+          }
+          return prev - 1;
+        });
       }, 1000);
     }
     return () => {
-      if (countdownTimerRef.current) {
-        clearTimeout(countdownTimerRef.current);
+      if (breathingTimerRef.current) {
+        clearTimeout(breathingTimerRef.current);
       }
     };
-  }, [showQuickPause, pauseCountdown]);
+  }, [showBreathing, totalTime, breathingPhase, phaseTimer]);
 
   const handleTap = async () => {
     await clearCoachConversation();
@@ -39,25 +56,29 @@ export default function HomeScreen() {
   };
 
   const handleLongPress = () => {
-    setShowQuickPause(true);
-    setPauseCountdown(60);
+    setShowBreathing(true);
+    setBreathingPhase('inhale');
+    setPhaseTimer(4);
+    setTotalTime(60);
   };
 
-  const closeQuickPause = () => {
-    setShowQuickPause(false);
-    setPauseCountdown(60);
-    if (countdownTimerRef.current) {
-      clearTimeout(countdownTimerRef.current);
+  const closeBreathing = () => {
+    setShowBreathing(false);
+    setBreathingPhase('inhale');
+    setPhaseTimer(4);
+    setTotalTime(60);
+    if (breathingTimerRef.current) {
+      clearTimeout(breathingTimerRef.current);
     }
   };
 
-  const handlePauseDone = () => {
-    addXP('delay-1min', 'Completed quick pause');
-    closeQuickPause();
+  const handleBreathingDone = () => {
+    addXP('delay-1min', 'Completed breathing exercise');
+    closeBreathing();
   };
 
   const handleTalkToLess = async () => {
-    closeQuickPause();
+    closeBreathing();
     await clearCoachConversation();
     router.push('/(tabs)/coach' as any);
   };
@@ -72,46 +93,58 @@ export default function HomeScreen() {
         </View>
 
         <Text style={styles.subtitle}>No logging required.</Text>
-        <Text style={styles.hint}>Long-press to pause.</Text>
+        <Text style={styles.hint}>Long-press to breathe.</Text>
       </View>
 
       <Modal
-        visible={showQuickPause}
+        visible={showBreathing}
         transparent
         animationType="fade"
-        onRequestClose={closeQuickPause}
+        onRequestClose={closeBreathing}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.pauseModal}>
-            <Text style={styles.pauseTitle}>
-              {pauseCountdown > 0 ? "Let's pause together for 60 seconds." : "Nice."}
-            </Text>
-            
-            {pauseCountdown > 0 ? (
+          <View style={styles.breathingModal}>
+            {totalTime > 0 ? (
               <>
-                <Text style={styles.pauseCountdown}>{pauseCountdown}s</Text>
-                <View style={styles.pauseProgressContainer}>
+                <Text style={styles.breathingTimer}>{totalTime}s</Text>
+                <Text style={styles.breathingInstruction}>
+                  {breathingPhase === 'inhale' && 'Breathe in...'}
+                  {breathingPhase === 'hold' && 'Hold...'}
+                  {breathingPhase === 'exhale' && 'Breathe out...'}
+                </Text>
+                <View style={styles.breathingCircleContainer}>
                   <View
                     style={[
-                      styles.pauseProgressBar,
-                      { width: `${((60 - pauseCountdown) / 60) * 100}%` },
+                      styles.breathingCircle,
+                      breathingPhase === 'inhale' && styles.breathingCircleExpand,
+                      breathingPhase === 'exhale' && styles.breathingCircleShrink,
+                    ]}
+                  />
+                </View>
+                <Text style={styles.phaseCounter}>{phaseTimer}</Text>
+                <View style={styles.progressContainer}>
+                  <View
+                    style={[
+                      styles.progressBar,
+                      { width: `${((60 - totalTime) / 60) * 100}%` },
                     ]}
                   />
                 </View>
               </>
             ) : (
-              <View style={styles.pauseCompleteActions}>
-                <Text style={styles.pauseCompleteText}>
+              <View style={styles.completeActions}>
+                <Text style={styles.breathingTitle}>Nice work.</Text>
+                <Text style={styles.completeText}>
                   Want to talk to Less or save this as a moment?
                 </Text>
-                <TouchableOpacity style={styles.pauseButton} onPress={handleTalkToLess}>
-                  <Text style={styles.pauseButtonText}>Talk to Less</Text>
+                <TouchableOpacity style={styles.actionButton} onPress={handleTalkToLess}>
+                  <Text style={styles.actionButtonText}>Talk to Less</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.pauseButton, styles.pauseButtonSecondary]}
-                  onPress={handlePauseDone}
+                  style={[styles.actionButton, styles.actionButtonSecondary]}
+                  onPress={handleBreathingDone}
                 >
-                  <Text style={[styles.pauseButtonText, styles.pauseButtonTextSecondary]}>
+                  <Text style={[styles.actionButtonText, styles.actionButtonTextSecondary]}>
                     Not now
                   </Text>
                 </TouchableOpacity>
@@ -174,10 +207,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 32,
   },
-  pauseModal: {
+  breathingModal: {
     backgroundColor: colors.surface,
     borderRadius: 24,
-    padding: 32,
+    padding: 40,
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
@@ -187,44 +220,80 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 10,
   },
-  pauseTitle: {
-    fontSize: 20,
+  breathingTitle: {
+    fontSize: 24,
+    fontWeight: '700' as const,
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  breathingTimer: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: colors.textLight,
+    marginBottom: 24,
+  },
+  breathingInstruction: {
+    fontSize: 28,
     fontWeight: '600' as const,
     color: colors.text,
     textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 28,
+    marginBottom: 32,
+    minHeight: 40,
   },
-  pauseCountdown: {
-    fontSize: 64,
+  breathingCircleContainer: {
+    width: 160,
+    height: 160,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 32,
+  },
+  breathingCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.calm.teal,
+  },
+  breathingCircleExpand: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+  },
+  breathingCircleShrink: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+  },
+  phaseCounter: {
+    fontSize: 48,
     fontWeight: '800' as const,
     color: colors.primary,
     marginBottom: 24,
   },
-  pauseProgressContainer: {
+  progressContainer: {
     width: '100%',
-    height: 8,
+    height: 6,
     backgroundColor: colors.background,
-    borderRadius: 4,
+    borderRadius: 3,
     overflow: 'hidden',
   },
-  pauseProgressBar: {
+  progressBar: {
     height: '100%',
     backgroundColor: colors.primary,
-    borderRadius: 4,
+    borderRadius: 3,
   },
-  pauseCompleteActions: {
+  completeActions: {
     width: '100%',
     alignItems: 'center',
   },
-  pauseCompleteText: {
+  completeText: {
     fontSize: 16,
     color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 24,
   },
-  pauseButton: {
+  actionButton: {
     width: '100%',
     backgroundColor: colors.primary,
     borderRadius: 16,
@@ -232,17 +301,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  pauseButtonSecondary: {
+  actionButtonSecondary: {
     backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  pauseButtonText: {
+  actionButtonText: {
     fontSize: 16,
     fontWeight: '700' as const,
     color: colors.surface,
   },
-  pauseButtonTextSecondary: {
+  actionButtonTextSecondary: {
     color: colors.textSecondary,
   },
 });
