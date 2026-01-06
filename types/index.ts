@@ -6,6 +6,8 @@ export type SweetType = 'chocolate' | 'candy' | 'ice-cream' | 'cookies' | 'cake'
 
 export type CravingOutcome = 'resisted' | 'small-portion' | 'gave-in';
 
+export type MomentCardState = 'active' | 'cooling' | 'settled';
+
 export interface Craving {
   id: string;
   timestamp: number;
@@ -17,6 +19,20 @@ export interface Craving {
   notes?: string;
   postDelayIntensity?: number;
   whatHelped?: string;
+  delayStartedAt?: number;
+  delayCompletedAt?: number;
+  delayDurationSec?: number;
+  stabilizerEngagementSec?: number;
+}
+
+export type UnlockableType = 'stabilizer-style' | 'theme' | 'coach-tone' | 'reflection-card' | 'insight-type';
+
+export interface Unlockable {
+  id: string;
+  type: UnlockableType;
+  name: string;
+  description: string;
+  icon?: string;
 }
 
 export interface UserProfile {
@@ -31,6 +47,10 @@ export interface UserProfile {
   level: number;
   unlockedFeatures?: string[];
   coachTone?: 'warm' | 'neutral' | 'playful';
+  selectedStabilizerStyle?: string;
+  selectedTheme?: string;
+  lastRewardTimestamp?: number;
+  weeklyReflectionLastViewed?: number;
 }
 
 export interface Streak {
@@ -74,4 +94,19 @@ export interface LevelData {
   level: number;
   xpRequired: number;
   unlocks: string[];
+}
+
+export interface SurpriseReward {
+  id: string;
+  unlockable: Unlockable;
+  timestamp: number;
+}
+
+export interface WeeklyInsight {
+  topEmotions: [string, number][];
+  peakTime: string;
+  whatHelpedMost: string;
+  delaySuccessRate: number;
+  avgIntensityDrop: number;
+  totalMoments: number;
 }

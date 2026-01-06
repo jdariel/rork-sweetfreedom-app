@@ -1,8 +1,9 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useApp } from '@/contexts/AppContext';
 import colors from '@/constants/colors';
-import { TrendingUp, Target, Heart, Calendar, Clock, Smile, Zap } from 'lucide-react-native';
+import { TrendingUp, Target, Heart, Calendar, Clock, Smile, Zap, Sparkles } from 'lucide-react-native';
 import { useMemo } from 'react';
+import { router } from 'expo-router';
 
 export default function ProgressScreen() {
   const { cravings, streak, shouldShowStreaks, resumeStreak } = useApp();
@@ -157,6 +158,21 @@ export default function ProgressScreen() {
             <Text style={styles.insightValue}>{stats.withDelay} times</Text>
           </View>
         </View>
+
+        <TouchableOpacity
+          style={styles.reflectionCard}
+          onPress={() => router.push('/weekly-reflection')}
+        >
+          <View style={styles.reflectionIconContainer}>
+            <Sparkles size={32} color={colors.secondary} />
+          </View>
+          <View style={styles.reflectionContent}>
+            <Text style={styles.reflectionTitle}>Weekly Reflection</Text>
+            <Text style={styles.reflectionDescription}>
+              View your personalized insight cards
+            </Text>
+          </View>
+        </TouchableOpacity>
 
         {!shouldShowStreaks && (
           <TouchableOpacity
@@ -324,5 +340,42 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600' as const,
     color: colors.surface,
+  },
+  reflectionCard: {
+    backgroundColor: colors.calm.peachLight,
+    borderRadius: 20,
+    padding: 20,
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.secondary,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  reflectionIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  reflectionContent: {
+    flex: 1,
+  },
+  reflectionTitle: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  reflectionDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
   },
 });

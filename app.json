@@ -22,7 +22,10 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "app.rork.sweetfreedom_app_u3fovqg"
+      "package": "app.rork.sweetfreedom_app_u3fovqg",
+      "permissions": [
+        "android.permission.VIBRATE"
+      ]
     },
     "web": {
       "favicon": "./assets/images/favicon.png"

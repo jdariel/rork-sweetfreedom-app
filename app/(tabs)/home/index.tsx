@@ -5,10 +5,14 @@ import { goalModeData } from '@/constants/goalModes';
 import colors from '@/constants/colors';
 import { Plus, Flame, Target, Clock, TrendingUp, Heart, Sparkles } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
+import MomentCard from '@/components/MomentCard';
+import RewardModal from '@/components/RewardModal';
 
 export default function HomeScreen() {
-  const { profile, streak, todayCravings, resistedToday, shouldShowStreaks, getXPProgress } = useApp();
+  const { profile, streak, todayCravings, resistedToday, shouldShowStreaks, getXPProgress, cravings, pendingReward, dismissReward } = useApp();
   const [pulseAnim] = useState(new Animated.Value(1));
+
+  const recentMoments = cravings.slice(-5).reverse();
 
   useEffect(() => {
     const animation = Animated.loop(
@@ -139,7 +143,22 @@ export default function HomeScreen() {
             </View>
           </TouchableOpacity>
         </View>
+
+        {recentMoments.length > 0 && (
+          <View style={styles.momentsSection}>
+            <Text style={styles.sectionTitle}>Recent Moments</Text>
+            {recentMoments.map((moment) => (
+              <MomentCard key={moment.id} craving={moment} showDetails={false} />
+            ))}
+          </View>
+        )}
       </ScrollView>
+
+      <RewardModal 
+        reward={pendingReward}
+        visible={!!pendingReward}
+        onDismiss={dismissReward}
+      />
 
       <TouchableOpacity
         style={styles.fab}
@@ -392,6 +411,9 @@ const styles = StyleSheet.create({
   actionDescription: {
     fontSize: 14,
     color: colors.textSecondary,
+  },
+  momentsSection: {
+    marginBottom: 16,
   },
   fab: {
     position: 'absolute' as const,

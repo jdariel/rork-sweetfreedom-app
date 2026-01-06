@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, TextInput, Pressable, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '@/constants/colors';
@@ -10,7 +10,7 @@ import * as Haptics from 'expo-haptics';
 
 export default function DelayFlowScreen() {
   const { cravingId } = useLocalSearchParams<{ cravingId: string }>();
-  const { updateCravingFeedback, updateCravingDelayUsed, updateCravingOutcome, profile, toggleFavoriteReplacement, toggleHiddenReplacement, addXP } = useApp();
+  const { updateCravingFeedback, updateCravingDelayUsed, updateCravingOutcome, updateCravingDelayData, profile, toggleFavoriteReplacement, toggleHiddenReplacement, addXP, triggerReward } = useApp();
   const [stage, setStage] = useState<'delay' | 'suggestions' | 'feedback' | 'outcome' | 'complete'>('delay');
   const [countdown, setCountdown] = useState<number>(300);
   const [pulseAnim] = useState(new Animated.Value(1));
@@ -19,6 +19,10 @@ export default function DelayFlowScreen() {
   const [breathingScale] = useState(new Animated.Value(1));
   const [postDelayIntensity, setPostDelayIntensity] = useState<number>(5);
   const [whatHelped, setWhatHelped] = useState<string>('');
+  const [isHoldingCircle, setIsHoldingCircle] = useState<boolean>(false);
+  const engagementStartTime = useRef<number>(0);
+  const totalEngagementTime = useRef<number>(0);
+  const delayStartTime = useRef<number>(Date.now());
 
   useEffect(() => {
     if (stage === 'delay' && countdown > 0) {
@@ -103,16 +107,38 @@ export default function DelayFlowScreen() {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+    const delayEndTime = Date.now();
+    const delayDuration = Math.floor((delayEndTime - delayStartTime.current) / 1000);
+    const engagementSec = Math.floor(totalEngagementTime.current / 1000);
+    
     if (cravingId) {
       updateCravingDelayUsed(cravingId);
+      updateCravingDelayData(cravingId, {
+        delayStartedAt: delayStartTime.current,
+        delayCompletedAt: delayEndTime,
+        delayDurationSec: delayDuration,
+        stabilizerEngagementSec: engagementSec,
+      });
     }
+    console.log('Delay completed:', delayDuration, 'sec, Engagement:', engagementSec, 'sec');
     setStage('feedback');
   };
 
-  const handleBreathingCirclePress = () => {
+  const handleBreathingCirclePressIn = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
+    setIsHoldingCircle(true);
+    engagementStartTime.current = Date.now();
+  };
+
+  const handleBreathingCirclePressOut = () => {
+    if (isHoldingCircle && engagementStartTime.current > 0) {
+      const engagementDuration = Date.now() - engagementStartTime.current;
+      totalEngagementTime.current += engagementDuration;
+      console.log('Engagement time:', engagementDuration, 'Total:', totalEngagementTime.current);
+    }
+    setIsHoldingCircle(false);
   };
 
   const visibleSuggestions = useMemo(() => {
@@ -147,6 +173,7 @@ export default function DelayFlowScreen() {
       updateCravingOutcome(cravingId, outcome);
     }
     addXP('delay-complete');
+    triggerReward('delay-complete');
     setStage('complete');
     setTimeout(() => {
       router.back();
@@ -373,17 +400,21 @@ export default function DelayFlowScreen() {
         <Text style={styles.timerText}>{formatTime(countdown)}</Text>
         
         <Pressable
-          onPressIn={handleBreathingCirclePress}
+          onPressIn={handleBreathingCirclePressIn}
+          onPressOut={handleBreathingCirclePressOut}
           style={styles.breathingCircleContainer}
         >
           <Animated.View
             style={[
               styles.breathingCircle,
-              { transform: [{ scale: breathingScale }] },
+              { 
+                transform: [{ scale: breathingScale }],
+                backgroundColor: isHoldingCircle ? colors.primary : colors.calm.tealLight,
+              },
             ]}
           >
             <View style={styles.breathingCircleInner}>
-              <Clock size={32} color={colors.primary} />
+              <Clock size={32} color={isHoldingCircle ? colors.surface : colors.primary} />
             </View>
           </Animated.View>
         </Pressable>
@@ -398,10 +429,15 @@ export default function DelayFlowScreen() {
           <Text style={styles.breathingCycleText}>
             {breathingCount > 0 && `${breathingCount} cycle${breathingCount > 1 ? 's' : ''} completed`}
           </Text>
+          {totalEngagementTime.current > 0 && (
+            <Text style={styles.engagementText}>
+              Engaged: {Math.floor(totalEngagementTime.current / 1000)}s
+            </Text>
+          )}
         </View>
 
         <Text style={styles.delaySubtitle}>
-          Tap the circle and breathe with it.{'\n'}Your moment will pass.
+          Hold the circle and breathe with it.{'\n'}Each second you hold adds to your control.
         </Text>
       </View>
 
@@ -506,6 +542,12 @@ const styles = StyleSheet.create({
   breathingCycleText: {
     fontSize: 14,
     color: colors.textSecondary,
+  },
+  engagementText: {
+    fontSize: 12,
+    color: colors.primary,
+    fontWeight: '600' as const,
+    marginTop: 4,
   },
   delaySubtitle: {
     fontSize: 18,

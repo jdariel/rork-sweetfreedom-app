@@ -2,13 +2,15 @@ import createContextHook from '@nkzw/create-context-hook';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState, useEffect, useMemo } from 'react';
-import { Craving, UserProfile, Streak, GoalMode, CravingOutcome, CoachMessage, XPAction } from '@/types';
+import { Craving, UserProfile, Streak, GoalMode, CravingOutcome, CoachMessage, XPAction, SurpriseReward } from '@/types';
+import { getRandomUnlockable } from '@/constants/unlockables';
 
 const STORAGE_KEYS = {
   PROFILE: '@craveless_profile',
   CRAVINGS: '@craveless_cravings',
   STREAK: '@craveless_streak',
   COACH_MESSAGES: '@craveless_coach_messages',
+  REWARDS: '@craveless_rewards',
 };
 
 const XP_VALUES: Record<XPAction['type'], number> = {
@@ -37,6 +39,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [streak, setStreak] = useState<Streak>({ current: 0, longest: 0, lastCravingDate: null });
   const [coachMessages, setCoachMessages] = useState<CoachMessage[]>([]);
+  const [rewards, setRewards] = useState<SurpriseReward[]>([]);
+  const [pendingReward, setPendingReward] = useState<SurpriseReward | null>(null);
 
   const profileQuery = useQuery({
     queryKey: ['profile'],
@@ -102,6 +106,22 @@ export const [AppProvider, useApp] = createContextHook(() => {
     }
   });
 
+  const rewardsQuery = useQuery({
+    queryKey: ['rewards'],
+    queryFn: async () => {
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEYS.REWARDS);
+        if (!stored || stored === 'undefined' || stored === 'null') return [];
+        const parsed = JSON.parse(stored);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        console.error('Error parsing rewards:', error);
+        await AsyncStorage.removeItem(STORAGE_KEYS.REWARDS);
+        return [];
+      }
+    }
+  });
+
   useEffect(() => {
     if (profileQuery.data !== undefined) {
       setProfile(profileQuery.data);
@@ -125,6 +145,12 @@ export const [AppProvider, useApp] = createContextHook(() => {
       setCoachMessages(coachMessagesQuery.data);
     }
   }, [coachMessagesQuery.data]);
+
+  useEffect(() => {
+    if (rewardsQuery.data) {
+      setRewards(rewardsQuery.data);
+    }
+  }, [rewardsQuery.data]);
 
   const saveCravingsMutation = useMutation({
     mutationFn: async (newCravings: Craving[]) => {
@@ -181,6 +207,19 @@ export const [AppProvider, useApp] = createContextHook(() => {
         return validMessages;
       } catch (error) {
         console.error('Error saving coach messages:', error);
+        throw error;
+      }
+    }
+  });
+
+  const saveRewardsMutation = useMutation({
+    mutationFn: async (newRewards: SurpriseReward[]) => {
+      try {
+        const jsonString = JSON.stringify(newRewards);
+        await AsyncStorage.setItem(STORAGE_KEYS.REWARDS, jsonString);
+        return newRewards;
+      } catch (error) {
+        console.error('Error saving rewards:', error);
         throw error;
       }
     }
@@ -244,6 +283,19 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const updateCravingDelayUsed = (id: string) => {
     const updated = cravings.map(c => 
       c.id === id ? { ...c, delayUsed: true } : c
+    );
+    setCravings(updated);
+    saveCravingsMutation.mutate(updated);
+  };
+
+  const updateCravingDelayData = (id: string, delayData: {
+    delayStartedAt: number;
+    delayCompletedAt: number;
+    delayDurationSec: number;
+    stabilizerEngagementSec: number;
+  }) => {
+    const updated = cravings.map(c => 
+      c.id === id ? { ...c, ...delayData } : c
     );
     setCravings(updated);
     saveCravingsMutation.mutate(updated);
@@ -466,11 +518,78 @@ export const [AppProvider, useApp] = createContextHook(() => {
     return { current, needed, percentage };
   };
 
+  const triggerReward = (trigger: 'delay-complete' | 'reflection' | 'return' | 'weekly-reflection') => {
+    if (!profile || profile.isInDistressMode) {
+      console.log('Reward skipped: distress mode active');
+      return;
+    }
+
+    const now = Date.now();
+    const lastReward = profile.lastRewardTimestamp || 0;
+    const hoursSinceLastReward = (now - lastReward) / (1000 * 60 * 60);
+
+    if (hoursSinceLastReward < 2) {
+      console.log('Reward skipped: too soon since last reward');
+      return;
+    }
+
+    const chance = Math.random();
+    let shouldTrigger = false;
+
+    if (trigger === 'delay-complete') shouldTrigger = chance < 0.15;
+    else if (trigger === 'reflection') shouldTrigger = chance < 0.2;
+    else if (trigger === 'return') shouldTrigger = chance < 0.3;
+    else if (trigger === 'weekly-reflection') shouldTrigger = chance < 0.4;
+
+    if (!shouldTrigger) {
+      console.log('Reward skipped: chance roll failed');
+      return;
+    }
+
+    const unlockedIds = rewards.map(r => r.unlockable.id);
+    const newUnlockable = getRandomUnlockable(unlockedIds);
+
+    if (!newUnlockable) {
+      console.log('Reward skipped: all unlockables obtained');
+      return;
+    }
+
+    const reward: SurpriseReward = {
+      id: `${Date.now()}-${Math.random()}`,
+      unlockable: newUnlockable,
+      timestamp: now,
+    };
+
+    const updatedRewards = [...rewards, reward];
+    setRewards(updatedRewards);
+    saveRewardsMutation.mutate(updatedRewards);
+
+    const updatedProfile = {
+      ...profile,
+      lastRewardTimestamp: now,
+    };
+    setProfile(updatedProfile);
+    saveProfileMutation.mutate(updatedProfile);
+
+    setPendingReward(reward);
+    console.log('Reward triggered:', reward.unlockable.name);
+  };
+
+  const dismissReward = () => {
+    setPendingReward(null);
+  };
+
+  const getUnlockedItems = () => {
+    return rewards.map(r => r.unlockable);
+  };
+
   return {
     profile,
     cravings,
     streak,
     coachMessages,
+    rewards,
+    pendingReward,
     todayCravings,
     resistedToday,
     shouldShowStreaks,
@@ -479,6 +598,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     updateCravingOutcome,
     updateCravingFeedback,
     updateCravingDelayUsed,
+    updateCravingDelayData,
     addCoachMessage,
     clearCoachMessages,
     clearAllData,
@@ -493,6 +613,9 @@ export const [AppProvider, useApp] = createContextHook(() => {
     addXP,
     changeCoachTone,
     getXPProgress,
-    isLoading: profileQuery.isLoading || cravingsQuery.isLoading || streakQuery.isLoading || coachMessagesQuery.isLoading,
+    triggerReward,
+    dismissReward,
+    getUnlockedItems,
+    isLoading: profileQuery.isLoading || cravingsQuery.isLoading || streakQuery.isLoading || coachMessagesQuery.isLoading || rewardsQuery.isLoading,
   };
 });

@@ -2,11 +2,11 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, 
 import { useApp } from '@/contexts/AppContext';
 import { goalModeData } from '@/constants/goalModes';
 import colors from '@/constants/colors';
-import { User, Target, Calendar, Award, AlertCircle, ExternalLink, Download, Trash2, MessageSquareOff } from 'lucide-react-native';
+import { User, Target, Calendar, Award, AlertCircle, ExternalLink, Download, Trash2, MessageSquareOff, Gift } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
-  const { profile, streak, cravings, coachMessages, exportData, clearAllData, clearCoachMessages } = useApp();
+  const { profile, streak, cravings, coachMessages, exportData, clearAllData, clearCoachMessages, getUnlockedItems } = useApp();
   const router = useRouter();
 
   if (!profile) {
@@ -18,6 +18,8 @@ export default function ProfileScreen() {
     month: 'long',
     year: 'numeric'
   });
+
+  const unlockedItems = getUnlockedItems();
 
   const handleExportData = async () => {
     try {
@@ -133,6 +135,32 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
+
+        {unlockedItems.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Unlocked Rewards</Text>
+            <View style={styles.unlocksCard}>
+              <View style={styles.unlocksHeader}>
+                <Gift size={20} color={colors.secondary} />
+                <Text style={styles.unlocksCount}>{unlockedItems.length} items unlocked</Text>
+              </View>
+              <View style={styles.unlocksList}>
+                {unlockedItems.slice(0, 6).map((item) => (
+                  <View key={item.id} style={styles.unlockItem}>
+                    <Text style={styles.unlockIcon}>{item.icon}</Text>
+                    <View style={styles.unlockInfo}>
+                      <Text style={styles.unlockName}>{item.name}</Text>
+                      <Text style={styles.unlockDescription}>{item.description}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+              {unlockedItems.length > 6 && (
+                <Text style={styles.unlocksMore}>+ {unlockedItems.length - 6} more</Text>
+              )}
+            </View>
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>About CraveLess</Text>
@@ -447,5 +475,60 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.border,
     marginHorizontal: 16,
+  },
+  unlocksCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  unlocksHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 8,
+  },
+  unlocksCount: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: colors.textSecondary,
+  },
+  unlocksList: {
+    gap: 12,
+  },
+  unlockItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  unlockIcon: {
+    fontSize: 32,
+  },
+  unlockInfo: {
+    flex: 1,
+  },
+  unlockName: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  unlockDescription: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  unlocksMore: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 12,
+    fontStyle: 'italic' as const,
   },
 });
