@@ -10,7 +10,7 @@ import * as Haptics from 'expo-haptics';
 
 export default function DelayFlowScreen() {
   const { cravingId } = useLocalSearchParams<{ cravingId: string }>();
-  const { updateCravingFeedback, updateCravingDelayUsed, updateCravingOutcome, updateCravingDelayData, profile, toggleFavoriteReplacement, toggleHiddenReplacement, addXP, triggerReward, recordReplacementSelection, getPersonalizedReplacements } = useApp();
+  const { updateCravingFeedback, updateCravingDelayUsed, updateCravingOutcome, updateCravingDelayData, profile, toggleFavoriteReplacement, toggleHiddenReplacement, addXP, triggerReward, recordReplacementSelection, getPersonalizedReplacements, incrementPausesCompleted } = useApp();
   const [stage, setStage] = useState<'delay' | 'suggestions' | 'feedback' | 'outcome' | 'complete'>('delay');
   const [countdown, setCountdown] = useState<number>(300);
   const [hasAwarded1Min, setHasAwarded1Min] = useState<boolean>(false);
@@ -134,6 +134,7 @@ export default function DelayFlowScreen() {
     
     if (delayDuration >= 300) {
       addXP('delay-complete', 'Completed full 5-minute pause');
+      incrementPausesCompleted();
     }
     
     console.log('Delay completed:', delayDuration, 'sec, Engagement:', engagementSec, 'sec');

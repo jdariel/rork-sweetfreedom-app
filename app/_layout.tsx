@@ -4,6 +4,7 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AppProvider } from "@/contexts/AppContext";
+import { migrateStorageKeysIfNeeded } from "@/utils/storageMigration";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -22,6 +23,9 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   useEffect(() => {
+    migrateStorageKeysIfNeeded().then(() => {
+      console.log('[App] Storage migration check completed');
+    });
     SplashScreen.hideAsync();
   }, []);
 

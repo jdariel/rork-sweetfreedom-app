@@ -9,7 +9,7 @@ import MomentCard from '@/components/MomentCard';
 import RewardModal from '@/components/RewardModal';
 
 export default function HomeScreen() {
-  const { profile, streak, todayCravings, resistedToday, shouldShowStreaks, getXPProgress, cravings, pendingReward, dismissReward, addXP } = useApp();
+  const { profile, streak, calmMomentum, todayCravings, resistedToday, shouldShowStreaks, shouldShowMomentum, getXPProgress, cravings, pendingReward, dismissReward, addXP } = useApp();
   const [pulseAnim] = useState(new Animated.Value(1));
   const [hasCheckedComeback, setHasCheckedComeback] = useState(false);
 
@@ -69,20 +69,50 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {shouldShowStreaks ? (
+        {shouldShowMomentum && (
+          <View style={styles.momentumCard}>
+            <View style={styles.momentumHeader}>
+              <Heart size={24} color={colors.primary} />
+              <Text style={styles.momentumHeaderText}>Calm Momentum</Text>
+            </View>
+            <View style={styles.momentumContent}>
+              <View style={styles.momentumStat}>
+                <Text style={styles.momentumNumber}>{calmMomentum.totalPausesCompleted}</Text>
+                <Text style={styles.momentumLabel}>Pauses Completed</Text>
+              </View>
+              <View style={styles.momentumStatusContainer}>
+                {calmMomentum.momentumState === 'active' ? (
+                  <>
+                    <View style={[styles.momentumStatusBadge, { backgroundColor: colors.calm.tealLight }]}>
+                      <Text style={[styles.momentumStatusText, { color: colors.primary }]}>Active</Text>
+                    </View>
+                    <Text style={styles.momentumSubtext}>Keep building momentum</Text>
+                  </>
+                ) : (
+                  <>
+                    <View style={[styles.momentumStatusBadge, { backgroundColor: colors.calm.peachLight }]}>
+                      <Text style={[styles.momentumStatusText, { color: colors.secondary }]}>Resting</Text>
+                    </View>
+                    <Text style={styles.momentumSubtext}>
+                      {calmMomentum.restingReason === 'distress' 
+                        ? 'Taking care of yourself comes first'
+                        : "Your calm momentum is resting. It'll be ready when you are."}
+                    </Text>
+                  </>
+                )}
+              </View>
+            </View>
+          </View>
+        )}
+
+        {shouldShowStreaks && (
           <View style={styles.streakCard}>
             <Animated.View style={[styles.streakIconContainer, { transform: [{ scale: pulseAnim }] }]}>
               <Flame size={48} color={colors.secondary} />
             </Animated.View>
             <Text style={styles.streakNumber}>{streak.current}</Text>
-            <Text style={styles.streakLabel}>Calm Streak</Text>
-            <Text style={styles.streakSubtext}>Best run: {streak.longest} days</Text>
-          </View>
-        ) : (
-          <View style={styles.pausedCard}>
-            <Heart size={40} color={colors.primary} />
-            <Text style={styles.pausedTitle}>Taking a Breath</Text>
-            <Text style={styles.pausedSubtext}>Your streak is resting. It&apos;ll be ready when you are.</Text>
+            <Text style={styles.streakLabel}>Day Streak</Text>
+            <Text style={styles.streakSubtext}>Best: {streak.longest} days</Text>
           </View>
         )}
 
@@ -188,6 +218,66 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 100,
   },
+  momentumCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  momentumHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 8,
+  },
+  momentumHeaderText: {
+    fontSize: 18,
+    fontWeight: '700' as const,
+    color: colors.text,
+  },
+  momentumContent: {
+    gap: 20,
+  },
+  momentumStat: {
+    alignItems: 'center',
+  },
+  momentumNumber: {
+    fontSize: 56,
+    fontWeight: '800' as const,
+    color: colors.primary,
+    marginBottom: 4,
+  },
+  momentumLabel: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: colors.textSecondary,
+  },
+  momentumStatusContainer: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  momentumStatusBadge: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  momentumStatusText: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+  momentumSubtext: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   streakCard: {
     backgroundColor: colors.surface,
     borderRadius: 24,
@@ -218,25 +308,6 @@ const styles = StyleSheet.create({
   streakSubtext: {
     fontSize: 14,
     color: colors.textLight,
-  },
-  pausedCard: {
-    backgroundColor: colors.calm.tealLight,
-    borderRadius: 24,
-    padding: 32,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  pausedTitle: {
-    fontSize: 24,
-    fontWeight: '700' as const,
-    color: colors.text,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  pausedSubtext: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    textAlign: 'center',
   },
   levelCard: {
     backgroundColor: colors.surface,

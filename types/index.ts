@@ -64,6 +64,14 @@ export interface Streak {
   pausedAt?: number;
 }
 
+export interface CalmMomentum {
+  totalPausesCompleted: number;
+  momentumState: 'active' | 'resting';
+  restingReason?: 'slip' | 'distress' | 'manual';
+  lastActiveISO?: string;
+  lastRestISO?: string;
+}
+
 export interface CoachMessage {
   id: string;
   role: 'user' | 'assistant';

@@ -3,13 +3,13 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, 
 import { useApp } from '@/contexts/AppContext';
 import { goalModeData } from '@/constants/goalModes';
 import colors from '@/constants/colors';
-import { User, Target, Calendar, Award, AlertCircle, ExternalLink, Download, Trash2, MessageSquareOff, Gift, Bug } from 'lucide-react-native';
+import { User, Target, Calendar, Heart, AlertCircle, ExternalLink, Download, Trash2, MessageSquareOff, Gift, Bug } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { loadUserInsightProfile, buildRecentStats, buildLessContextSnapshot, topK } from '@/utils/lessAiMemory';
 import { UserInsightProfile } from '@/types';
 
 export default function ProfileScreen() {
-  const { profile, streak, cravings, coachMessages, exportData, clearAllData, clearCoachMessages, getUnlockedItems } = useApp();
+  const { profile, streak, calmMomentum, cravings, coachMessages, exportData, clearAllData, clearCoachMessages, getUnlockedItems } = useApp();
   const router = useRouter();
   const [showDebug, setShowDebug] = useState<boolean>(false);
   const [insightProfile, setInsightProfile] = useState<UserInsightProfile | null>(null);
@@ -137,23 +137,33 @@ export default function ProfileScreen() {
         <View style={styles.statsCard}>
           <View style={styles.statRow}>
             <View style={styles.statItem}>
-              <View style={[styles.statIconContainer, { backgroundColor: colors.calm.peachLight }]}>
-                <Calendar size={24} color={colors.secondary} />
+              <View style={[styles.statIconContainer, { backgroundColor: colors.calm.tealLight }]}>
+                <Heart size={24} color={colors.primary} />
               </View>
-              <Text style={styles.statValue}>{streak.current}</Text>
-              <Text style={styles.statLabel}>Current Streak</Text>
+              <Text style={styles.statValue}>{calmMomentum.totalPausesCompleted}</Text>
+              <Text style={styles.statLabel}>Pauses</Text>
             </View>
 
             <View style={styles.statDivider} />
 
             <View style={styles.statItem}>
-              <View style={[styles.statIconContainer, { backgroundColor: colors.calm.sage }]}>
-                <Award size={24} color={colors.success} />
+              <View style={[styles.statIconContainer, { backgroundColor: colors.calm.peachLight }]}>
+                <Calendar size={24} color={colors.secondary} />
               </View>
-              <Text style={styles.statValue}>{streak.longest}</Text>
-              <Text style={styles.statLabel}>Best Streak</Text>
+              <Text style={styles.statValue}>{streak.current}</Text>
+              <Text style={styles.statLabel}>Day Streak</Text>
             </View>
           </View>
+          
+          {calmMomentum.momentumState === 'resting' && (
+            <View style={styles.momentumRestingBanner}>
+              <Text style={styles.momentumRestingText}>
+                {calmMomentum.restingReason === 'distress' 
+                  ? '💙 Taking care of yourself comes first'
+                  : "🌙 Your calm momentum is resting. It'll be ready when you are."}
+              </Text>
+            </View>
+          )}
         </View>
 
         {unlockedItems.length > 0 && (
@@ -477,6 +487,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  momentumRestingBanner: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  momentumRestingText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   statDivider: {
     width: 1,

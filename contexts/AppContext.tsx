@@ -2,13 +2,14 @@ import createContextHook from '@nkzw/create-context-hook';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState, useEffect, useMemo } from 'react';
-import { Craving, UserProfile, Streak, GoalMode, CravingOutcome, CoachMessage, XPAction, SurpriseReward, ReplacementSelection } from '@/types';
+import { Craving, UserProfile, Streak, CalmMomentum, GoalMode, CravingOutcome, CoachMessage, XPAction, SurpriseReward, ReplacementSelection } from '@/types';
 import { getRandomUnlockable, getLevelUnlock } from '@/constants/unlockables';
 
 const STORAGE_KEYS = {
   PROFILE: '@craveless_profile',
   CRAVINGS: '@craveless_cravings',
   STREAK: '@craveless_streak',
+  CALM_MOMENTUM: '@craveless_calm_momentum',
   COACH_MESSAGES: '@craveless_coach_messages',
   REWARDS: '@craveless_rewards',
 };
@@ -64,6 +65,10 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const [cravings, setCravings] = useState<Craving[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [streak, setStreak] = useState<Streak>({ current: 0, longest: 0, lastCravingDate: null });
+  const [calmMomentum, setCalmMomentum] = useState<CalmMomentum>({
+    totalPausesCompleted: 0,
+    momentumState: 'active',
+  });
   const [coachMessages, setCoachMessages] = useState<CoachMessage[]>([]);
   const [rewards, setRewards] = useState<SurpriseReward[]>([]);
   const [pendingReward, setPendingReward] = useState<SurpriseReward | null>(null);
@@ -112,6 +117,24 @@ export const [AppProvider, useApp] = createContextHook(() => {
         console.error('Error parsing streak:', error);
         await AsyncStorage.removeItem(STORAGE_KEYS.STREAK);
         return { current: 0, longest: 0, lastCravingDate: null };
+      }
+    }
+  });
+
+  const calmMomentumQuery = useQuery({
+    queryKey: ['calmMomentum'],
+    queryFn: async () => {
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEYS.CALM_MOMENTUM);
+        if (!stored || stored === 'undefined' || stored === 'null') {
+          return { totalPausesCompleted: 0, momentumState: 'active' as const };
+        }
+        const parsed = JSON.parse(stored);
+        return parsed;
+      } catch (error) {
+        console.error('Error parsing calm momentum:', error);
+        await AsyncStorage.removeItem(STORAGE_KEYS.CALM_MOMENTUM);
+        return { totalPausesCompleted: 0, momentumState: 'active' as const };
       }
     }
   });
@@ -167,6 +190,12 @@ export const [AppProvider, useApp] = createContextHook(() => {
   }, [streakQuery.data]);
 
   useEffect(() => {
+    if (calmMomentumQuery.data) {
+      setCalmMomentum(calmMomentumQuery.data);
+    }
+  }, [calmMomentumQuery.data]);
+
+  useEffect(() => {
     if (coachMessagesQuery.data) {
       setCoachMessages(coachMessagesQuery.data);
     }
@@ -212,6 +241,19 @@ export const [AppProvider, useApp] = createContextHook(() => {
         return newStreak;
       } catch (error) {
         console.error('Error saving streak:', error);
+        throw error;
+      }
+    }
+  });
+
+  const saveCalmMomentumMutation = useMutation({
+    mutationFn: async (newMomentum: CalmMomentum) => {
+      try {
+        const jsonString = JSON.stringify(newMomentum);
+        await AsyncStorage.setItem(STORAGE_KEYS.CALM_MOMENTUM, jsonString);
+        return newMomentum;
+      } catch (error) {
+        console.error('Error saving calm momentum:', error);
         throw error;
       }
     }
@@ -277,8 +319,10 @@ export const [AppProvider, useApp] = createContextHook(() => {
 
     if (craving.outcome === 'resisted') {
       updateStreak(true);
+      setMomentumActive();
     } else if (craving.outcome === 'gave-in') {
       updateStreak(false);
+      setMomentumResting('slip');
     }
 
     return newCraving;
@@ -293,8 +337,12 @@ export const [AppProvider, useApp] = createContextHook(() => {
 
     if (outcome === 'resisted') {
       updateStreak(true);
+      setMomentumActive();
     } else if (outcome === 'gave-in') {
       updateStreak(false);
+      setMomentumResting('slip');
+    } else if (outcome === 'small-portion') {
+      setMomentumActive();
     }
   };
 
@@ -351,6 +399,43 @@ export const [AppProvider, useApp] = createContextHook(() => {
     saveStreakMutation.mutate(newStreak);
   };
 
+  const setMomentumResting = (reason: 'slip' | 'distress' | 'manual') => {
+    const newMomentum: CalmMomentum = {
+      ...calmMomentum,
+      momentumState: 'resting',
+      restingReason: reason,
+      lastRestISO: new Date().toISOString(),
+    };
+    setCalmMomentum(newMomentum);
+    saveCalmMomentumMutation.mutate(newMomentum);
+    console.log('[Calm Momentum] Set to resting:', reason);
+  };
+
+  const setMomentumActive = () => {
+    const newMomentum: CalmMomentum = {
+      ...calmMomentum,
+      momentumState: 'active',
+      restingReason: undefined,
+      lastActiveISO: new Date().toISOString(),
+    };
+    setCalmMomentum(newMomentum);
+    saveCalmMomentumMutation.mutate(newMomentum);
+    console.log('[Calm Momentum] Set to active');
+  };
+
+  const incrementPausesCompleted = () => {
+    const newMomentum: CalmMomentum = {
+      ...calmMomentum,
+      totalPausesCompleted: calmMomentum.totalPausesCompleted + 1,
+      momentumState: 'active',
+      restingReason: undefined,
+      lastActiveISO: new Date().toISOString(),
+    };
+    setCalmMomentum(newMomentum);
+    saveCalmMomentumMutation.mutate(newMomentum);
+    console.log('[Calm Momentum] Pause completed, total:', newMomentum.totalPausesCompleted);
+  };
+
   const pauseStreak = () => {
     const newStreak = {
       ...streak,
@@ -381,6 +466,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     setProfile(newProfile);
     saveProfileMutation.mutate(newProfile);
     pauseStreak();
+    setMomentumResting('distress');
   };
 
   const deactivateDistressMode = () => {
@@ -430,6 +516,10 @@ export const [AppProvider, useApp] = createContextHook(() => {
     return true;
   }, [profile?.isInDistressMode, streak.isPaused]);
 
+  const shouldShowMomentum = useMemo(() => {
+    return !profile?.isInDistressMode;
+  }, [profile?.isInDistressMode]);
+
   const todayCravings = useMemo(() => {
     const today = new Date().setHours(0, 0, 0, 0);
     return cravings.filter(c => new Date(c.timestamp).setHours(0, 0, 0, 0) === today);
@@ -467,11 +557,13 @@ export const [AppProvider, useApp] = createContextHook(() => {
         STORAGE_KEYS.PROFILE,
         STORAGE_KEYS.CRAVINGS,
         STORAGE_KEYS.STREAK,
+        STORAGE_KEYS.CALM_MOMENTUM,
         STORAGE_KEYS.COACH_MESSAGES,
       ]);
       setProfile(null);
       setCravings([]);
       setStreak({ current: 0, longest: 0, lastCravingDate: null });
+      setCalmMomentum({ totalPausesCompleted: 0, momentumState: 'active' });
       setCoachMessages([]);
     } catch (error) {
       console.error('Error clearing all data:', error);
@@ -786,12 +878,14 @@ export const [AppProvider, useApp] = createContextHook(() => {
     profile,
     cravings,
     streak,
+    calmMomentum,
     coachMessages,
     rewards,
     pendingReward,
     todayCravings,
     resistedToday,
     shouldShowStreaks,
+    shouldShowMomentum,
     completeOnboarding,
     addCraving,
     updateCravingOutcome,
@@ -807,6 +901,9 @@ export const [AppProvider, useApp] = createContextHook(() => {
     deactivateDistressMode,
     pauseStreak,
     resumeStreak,
+    setMomentumResting,
+    setMomentumActive,
+    incrementPausesCompleted,
     toggleFavoriteReplacement,
     toggleHiddenReplacement,
     addXP,
@@ -817,6 +914,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
     getUnlockedItems,
     recordReplacementSelection,
     getPersonalizedReplacements,
-    isLoading: profileQuery.isLoading || cravingsQuery.isLoading || streakQuery.isLoading || coachMessagesQuery.isLoading || rewardsQuery.isLoading,
+    isLoading: profileQuery.isLoading || cravingsQuery.isLoading || streakQuery.isLoading || calmMomentumQuery.isLoading || coachMessagesQuery.isLoading || rewardsQuery.isLoading,
   };
 });
