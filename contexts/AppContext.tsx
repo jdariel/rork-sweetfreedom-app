@@ -80,11 +80,17 @@ export const [AppProvider, useApp] = createContextHook(() => {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.PROFILE);
         if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') return null;
         
+        if (!stored.startsWith('{') && !stored.startsWith('[')) {
+          console.error('[Profile] Invalid JSON format, clearing');
+          await AsyncStorage.removeItem(STORAGE_KEYS.PROFILE);
+          return null;
+        }
+        
         let parsed;
         try {
           parsed = JSON.parse(stored);
-        } catch (parseError) {
-          console.error('[Profile] JSON parse error, clearing:', parseError);
+        } catch {
+          console.error('[Profile] JSON parse error, clearing');
           await AsyncStorage.removeItem(STORAGE_KEYS.PROFILE);
           return null;
         }
@@ -94,13 +100,16 @@ export const [AppProvider, useApp] = createContextHook(() => {
           return null;
         }
         return parsed;
-      } catch (error) {
-        console.error('[Profile] Storage error:', error);
-        await AsyncStorage.removeItem(STORAGE_KEYS.PROFILE);
+      } catch {
+        console.error('[Profile] Storage error');
+        try {
+          await AsyncStorage.removeItem(STORAGE_KEYS.PROFILE);
+        } catch {}
         return null;
       }
     },
     retry: false,
+    retryOnMount: false,
   });
 
   const cravingsQuery = useQuery({
@@ -110,23 +119,32 @@ export const [AppProvider, useApp] = createContextHook(() => {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.CRAVINGS);
         if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') return [];
         
+        if (!stored.startsWith('[')) {
+          console.error('[Cravings] Invalid JSON format, clearing');
+          await AsyncStorage.removeItem(STORAGE_KEYS.CRAVINGS);
+          return [];
+        }
+        
         let parsed;
         try {
           parsed = JSON.parse(stored);
-        } catch (parseError) {
-          console.error('[Cravings] JSON parse error, clearing:', parseError);
+        } catch {
+          console.error('[Cravings] JSON parse error, clearing');
           await AsyncStorage.removeItem(STORAGE_KEYS.CRAVINGS);
           return [];
         }
         
         return Array.isArray(parsed) ? parsed : [];
-      } catch (error) {
-        console.error('[Cravings] Storage error:', error);
-        await AsyncStorage.removeItem(STORAGE_KEYS.CRAVINGS);
+      } catch {
+        console.error('[Cravings] Storage error');
+        try {
+          await AsyncStorage.removeItem(STORAGE_KEYS.CRAVINGS);
+        } catch {}
         return [];
       }
     },
     retry: false,
+    retryOnMount: false,
   });
 
   const streakQuery = useQuery({
@@ -136,23 +154,32 @@ export const [AppProvider, useApp] = createContextHook(() => {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.STREAK);
         if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') return { current: 0, longest: 0, lastCravingDate: null };
         
+        if (!stored.startsWith('{')) {
+          console.error('[Streak] Invalid JSON format, clearing');
+          await AsyncStorage.removeItem(STORAGE_KEYS.STREAK);
+          return { current: 0, longest: 0, lastCravingDate: null };
+        }
+        
         let parsed;
         try {
           parsed = JSON.parse(stored);
-        } catch (parseError) {
-          console.error('[Streak] JSON parse error, clearing:', parseError);
+        } catch {
+          console.error('[Streak] JSON parse error, clearing');
           await AsyncStorage.removeItem(STORAGE_KEYS.STREAK);
           return { current: 0, longest: 0, lastCravingDate: null };
         }
         
         return parsed;
-      } catch (error) {
-        console.error('[Streak] Storage error:', error);
-        await AsyncStorage.removeItem(STORAGE_KEYS.STREAK);
+      } catch {
+        console.error('[Streak] Storage error');
+        try {
+          await AsyncStorage.removeItem(STORAGE_KEYS.STREAK);
+        } catch {}
         return { current: 0, longest: 0, lastCravingDate: null };
       }
     },
     retry: false,
+    retryOnMount: false,
   });
 
   const calmMomentumQuery = useQuery({
@@ -164,23 +191,32 @@ export const [AppProvider, useApp] = createContextHook(() => {
           return { totalPausesCompleted: 0, momentumState: 'active' as const };
         }
         
+        if (!stored.startsWith('{')) {
+          console.error('[CalmMomentum] Invalid JSON format, clearing');
+          await AsyncStorage.removeItem(STORAGE_KEYS.CALM_MOMENTUM);
+          return { totalPausesCompleted: 0, momentumState: 'active' as const };
+        }
+        
         let parsed;
         try {
           parsed = JSON.parse(stored);
-        } catch (parseError) {
-          console.error('[CalmMomentum] JSON parse error, clearing:', parseError);
+        } catch {
+          console.error('[CalmMomentum] JSON parse error, clearing');
           await AsyncStorage.removeItem(STORAGE_KEYS.CALM_MOMENTUM);
           return { totalPausesCompleted: 0, momentumState: 'active' as const };
         }
         
         return parsed;
-      } catch (error) {
-        console.error('[CalmMomentum] Storage error:', error);
-        await AsyncStorage.removeItem(STORAGE_KEYS.CALM_MOMENTUM);
+      } catch {
+        console.error('[CalmMomentum] Storage error');
+        try {
+          await AsyncStorage.removeItem(STORAGE_KEYS.CALM_MOMENTUM);
+        } catch {}
         return { totalPausesCompleted: 0, momentumState: 'active' as const };
       }
     },
     retry: false,
+    retryOnMount: false,
   });
 
   const coachMessagesQuery = useQuery({
@@ -190,23 +226,32 @@ export const [AppProvider, useApp] = createContextHook(() => {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.COACH_MESSAGES);
         if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') return [];
         
+        if (!stored.startsWith('[')) {
+          console.error('[CoachMessages] Invalid JSON format, clearing');
+          await AsyncStorage.removeItem(STORAGE_KEYS.COACH_MESSAGES);
+          return [];
+        }
+        
         let parsed;
         try {
           parsed = JSON.parse(stored);
-        } catch (parseError) {
-          console.error('[CoachMessages] JSON parse error, clearing:', parseError);
+        } catch {
+          console.error('[CoachMessages] JSON parse error, clearing');
           await AsyncStorage.removeItem(STORAGE_KEYS.COACH_MESSAGES);
           return [];
         }
         
         return Array.isArray(parsed) ? parsed : [];
-      } catch (error) {
-        console.error('[CoachMessages] Storage error:', error);
-        await AsyncStorage.removeItem(STORAGE_KEYS.COACH_MESSAGES);
+      } catch {
+        console.error('[CoachMessages] Storage error');
+        try {
+          await AsyncStorage.removeItem(STORAGE_KEYS.COACH_MESSAGES);
+        } catch {}
         return [];
       }
     },
     retry: false,
+    retryOnMount: false,
   });
 
   const rewardsQuery = useQuery({
@@ -216,23 +261,32 @@ export const [AppProvider, useApp] = createContextHook(() => {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.REWARDS);
         if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') return [];
         
+        if (!stored.startsWith('[')) {
+          console.error('[Rewards] Invalid JSON format, clearing');
+          await AsyncStorage.removeItem(STORAGE_KEYS.REWARDS);
+          return [];
+        }
+        
         let parsed;
         try {
           parsed = JSON.parse(stored);
-        } catch (parseError) {
-          console.error('[Rewards] JSON parse error, clearing:', parseError);
+        } catch {
+          console.error('[Rewards] JSON parse error, clearing');
           await AsyncStorage.removeItem(STORAGE_KEYS.REWARDS);
           return [];
         }
         
         return Array.isArray(parsed) ? parsed : [];
-      } catch (error) {
-        console.error('[Rewards] Storage error:', error);
-        await AsyncStorage.removeItem(STORAGE_KEYS.REWARDS);
+      } catch {
+        console.error('[Rewards] Storage error');
+        try {
+          await AsyncStorage.removeItem(STORAGE_KEYS.REWARDS);
+        } catch {}
         return [];
       }
     },
     retry: false,
+    retryOnMount: false,
   });
 
   useEffect(() => {

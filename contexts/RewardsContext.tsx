@@ -39,11 +39,17 @@ export const [RewardsProvider, useRewards] = createContextHook(() => {
           return createDefaultRewardsState();
         }
         
+        if (!stored.startsWith('{')) {
+          console.error('[Rewards] Invalid JSON format, clearing');
+          await AsyncStorage.removeItem(STORAGE_KEY);
+          return createDefaultRewardsState();
+        }
+        
         let parsed;
         try {
           parsed = JSON.parse(stored);
-        } catch (parseError) {
-          console.error('[Rewards] JSON parse error:', parseError, 'Data:', stored.substring(0, 100));
+        } catch {
+          console.error('[Rewards] JSON parse error, clearing');
           await AsyncStorage.removeItem(STORAGE_KEY);
           return createDefaultRewardsState();
         }
@@ -56,13 +62,16 @@ export const [RewardsProvider, useRewards] = createContextHook(() => {
         
         console.log('[Rewards] Loaded from storage');
         return parsed;
-      } catch (error) {
-        console.error('[Rewards] Storage error:', error);
-        await AsyncStorage.removeItem(STORAGE_KEY);
+      } catch {
+        console.error('[Rewards] Storage error');
+        try {
+          await AsyncStorage.removeItem(STORAGE_KEY);
+        } catch {}
         return createDefaultRewardsState();
       }
     },
     retry: false,
+    retryOnMount: false,
   });
 
   const saveRewardsMutation = useMutation({
