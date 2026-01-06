@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -81,8 +81,9 @@ function FlippableCard({ title, frontContent, backContent, icon, isFlipped, onFl
 }
 
 export default function WeeklyReflectionScreen() {
-  const { cravings, profile, triggerReward } = useApp();
+  const { cravings, profile, triggerReward, addXP } = useApp();
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
+  const [hasOpenedDeck, setHasOpenedDeck] = useState(false);
 
   const weeklyInsight = useMemo<WeeklyInsight>(() => {
     const now = Date.now();
@@ -150,6 +151,13 @@ export default function WeeklyReflectionScreen() {
     };
   }, [cravings]);
 
+  useEffect(() => {
+    if (!hasOpenedDeck && weeklyInsight.totalMoments > 0) {
+      addXP('weekly-deck-open', 'Opened weekly reflection');
+      setHasOpenedDeck(true);
+    }
+  }, [hasOpenedDeck, weeklyInsight.totalMoments, addXP]);
+
   const toggleCardFlip = (index: number) => {
     setFlippedCards(prev => {
       const newSet = new Set(prev);
@@ -158,11 +166,19 @@ export default function WeeklyReflectionScreen() {
       } else {
         newSet.add(index);
       }
+      
+      const totalCards = weeklyInsight.avgIntensityDrop > 0 ? 4 : 3;
+      if (newSet.size === totalCards) {
+        addXP('weekly-deck-complete', 'Flipped all reflection cards');
+      }
+      
       return newSet;
     });
   };
 
   const handleComplete = () => {
+    addXP('weekly-highlight-save', 'Saved weekly highlights');
+    
     if (profile) {
       const lastViewed = profile.weeklyReflectionLastViewed || 0;
       const daysSinceViewed = (Date.now() - lastViewed) / (1000 * 60 * 60 * 24);

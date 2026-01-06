@@ -51,6 +51,8 @@ export interface UserProfile {
   selectedTheme?: string;
   lastRewardTimestamp?: number;
   weeklyReflectionLastViewed?: number;
+  xpActions?: XPAction[];
+  lastActiveDate?: number;
 }
 
 export interface Streak {
@@ -85,9 +87,24 @@ export interface AIMessage {
 }
 
 export interface XPAction {
-  type: 'delay-start' | 'delay-complete' | 'log-moment' | 'reflection' | 'coach-chat';
+  type: 
+    | 'log-moment'
+    | 'add-emotion'
+    | 'add-note'
+    | 'delay-start'
+    | 'delay-1min'
+    | 'delay-complete'
+    | 'post-delay-checkin'
+    | 'select-outcome'
+    | 'coach-message'
+    | 'coach-helped'
+    | 'weekly-deck-open'
+    | 'weekly-deck-complete'
+    | 'weekly-highlight-save'
+    | 'comeback-bonus';
   xp: number;
   label: string;
+  timestamp: number;
 }
 
 export interface LevelData {

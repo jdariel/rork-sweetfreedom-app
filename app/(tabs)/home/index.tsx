@@ -9,8 +9,9 @@ import MomentCard from '@/components/MomentCard';
 import RewardModal from '@/components/RewardModal';
 
 export default function HomeScreen() {
-  const { profile, streak, todayCravings, resistedToday, shouldShowStreaks, getXPProgress, cravings, pendingReward, dismissReward } = useApp();
+  const { profile, streak, todayCravings, resistedToday, shouldShowStreaks, getXPProgress, cravings, pendingReward, dismissReward, addXP } = useApp();
   const [pulseAnim] = useState(new Animated.Value(1));
+  const [hasCheckedComeback, setHasCheckedComeback] = useState(false);
 
   const recentMoments = cravings.slice(-5).reverse();
 
@@ -32,6 +33,13 @@ export default function HomeScreen() {
     animation.start();
     return () => animation.stop();
   }, [pulseAnim]);
+
+  useEffect(() => {
+    if (!hasCheckedComeback && profile) {
+      addXP('comeback-bonus', 'Welcome back!');
+      setHasCheckedComeback(true);
+    }
+  }, [profile, hasCheckedComeback, addXP]);
 
   const goalData = profile ? goalModeData[profile.goalMode] : null;
   const xpProgress = getXPProgress();

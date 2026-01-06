@@ -9,7 +9,7 @@ import { classifyMessage, buildSafePrompt } from '@/utils/aiSafetyFilters';
 export default function CoachScreen() {
   const [input, setInput] = useState<string>('');
   const scrollViewRef = useRef<ScrollView>(null);
-  const { coachMessages, addCoachMessage, clearCoachMessages, markMessageHelpCheckComplete, cravings, profile, activateDistressMode, pauseStreak } = useApp();
+  const { coachMessages, addCoachMessage, clearCoachMessages, markMessageHelpCheckComplete, cravings, profile, activateDistressMode, pauseStreak, addXP } = useApp();
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [streamingContent, setStreamingContent] = useState<string>('');
   const streamTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -91,6 +91,7 @@ export default function CoachScreen() {
       }
       
       addCoachMessage({ role: 'user', content: userMessage });
+      addXP('coach-message', 'Sent message to coach');
       
       if (safetyAnalysis.shouldUseFallback && safetyAnalysis.fallbackResponse) {
         addCoachMessage({ role: 'assistant', content: safetyAnalysis.fallbackResponse, needsHelpCheck: true });
@@ -134,6 +135,7 @@ export default function CoachScreen() {
     markMessageHelpCheckComplete(messageId);
     
     if (wasHelpful) {
+      addXP('coach-helped', 'Coach was helpful');
       setTimeout(() => {
         clearCoachMessages();
         setMessages([]);
@@ -204,6 +206,7 @@ export default function CoachScreen() {
                   }
                   
                   addCoachMessage({ role: 'user', content: prompt });
+                  addXP('coach-message', 'Sent message to coach');
                   
                   if (safetyAnalysis.shouldUseFallback && safetyAnalysis.fallbackResponse) {
                     addCoachMessage({ role: 'assistant', content: safetyAnalysis.fallbackResponse, needsHelpCheck: true });

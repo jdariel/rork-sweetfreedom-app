@@ -13,6 +13,7 @@ export default function DelayFlowScreen() {
   const { updateCravingFeedback, updateCravingDelayUsed, updateCravingOutcome, updateCravingDelayData, profile, toggleFavoriteReplacement, toggleHiddenReplacement, addXP, triggerReward } = useApp();
   const [stage, setStage] = useState<'delay' | 'suggestions' | 'feedback' | 'outcome' | 'complete'>('delay');
   const [countdown, setCountdown] = useState<number>(300);
+  const [hasAwarded1Min, setHasAwarded1Min] = useState<boolean>(false);
   const [pulseAnim] = useState(new Animated.Value(1));
   const [breathingPhase, setBreathingPhase] = useState<'inhale' | 'hold' | 'exhale' | 'rest'>('inhale');
   const [breathingCount, setBreathingCount] = useState<number>(0);
@@ -27,11 +28,18 @@ export default function DelayFlowScreen() {
   useEffect(() => {
     if (stage === 'delay' && countdown > 0) {
       const timer = setInterval(() => {
-        setCountdown((prev) => prev - 1);
+        setCountdown((prev) => {
+          const newCount = prev - 1;
+          if (newCount === 240 && !hasAwarded1Min) {
+            addXP('delay-1min', 'Completed 1 minute of pause');
+            setHasAwarded1Min(true);
+          }
+          return newCount;
+        });
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [stage, countdown]);
+  }, [stage, countdown, hasAwarded1Min, addXP]);
 
   useEffect(() => {
     const pulse = Animated.loop(
@@ -120,6 +128,11 @@ export default function DelayFlowScreen() {
         stabilizerEngagementSec: engagementSec,
       });
     }
+    
+    if (delayDuration >= 300) {
+      addXP('delay-complete', 'Completed full 5-minute pause');
+    }
+    
     console.log('Delay completed:', delayDuration, 'sec, Engagement:', engagementSec, 'sec');
     setStage('feedback');
   };
@@ -164,7 +177,7 @@ export default function DelayFlowScreen() {
     if (cravingId) {
       updateCravingFeedback(cravingId, postDelayIntensity, whatHelped || undefined);
     }
-    addXP('reflection');
+    addXP('post-delay-checkin', 'Post-delay check-in');
     setStage('outcome');
   };
 
@@ -172,7 +185,7 @@ export default function DelayFlowScreen() {
     if (cravingId) {
       updateCravingOutcome(cravingId, outcome);
     }
-    addXP('delay-complete');
+    addXP('select-outcome', `Selected outcome: ${outcome}`);
     triggerReward('delay-complete');
     setStage('complete');
     setTimeout(() => {

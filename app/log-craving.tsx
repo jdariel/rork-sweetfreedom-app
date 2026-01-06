@@ -28,7 +28,11 @@ export default function LogCravingScreen() {
     };
     
     const createdCraving = addCraving(newCraving);
-    addXP('log-moment');
+    addXP('log-moment', 'Logged a moment');
+    
+    if (notes && notes.trim()) {
+      addXP('add-note', 'Added notes to moment');
+    }
 
     router.replace(`/delay-flow?cravingId=${createdCraving.id}`);
   };

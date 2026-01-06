@@ -14,12 +14,29 @@ const STORAGE_KEYS = {
 };
 
 const XP_VALUES: Record<XPAction['type'], number> = {
+  'log-moment': 10,
+  'add-emotion': 5,
+  'add-note': 5,
   'delay-start': 10,
-  'delay-complete': 25,
-  'log-moment': 5,
-  'reflection': 15,
-  'coach-chat': 8,
+  'delay-1min': 10,
+  'delay-complete': 30,
+  'post-delay-checkin': 10,
+  'select-outcome': 10,
+  'coach-message': 5,
+  'coach-helped': 10,
+  'weekly-deck-open': 10,
+  'weekly-deck-complete': 30,
+  'weekly-highlight-save': 10,
+  'comeback-bonus': 20,
 };
+
+const XP_DAILY_CAPS: Partial<Record<XPAction['type'], number>> = {
+  'coach-message': 6,
+  'coach-helped': 2,
+  'comeback-bonus': 1,
+};
+
+const DISTRESS_MODE_DAILY_XP_CAP = 60;
 
 const LEVEL_THRESHOLDS = [0, 100, 250, 450, 700, 1000, 1400, 1850, 2350, 2900, 3500];
 
@@ -471,9 +488,57 @@ export const [AppProvider, useApp] = createContextHook(() => {
     saveCoachMessagesMutation.mutate(updated);
   };
 
-  const addXP = (actionType: XPAction['type']) => {
+  const addXP = (actionType: XPAction['type'], label?: string) => {
     if (!profile) return;
-    const xpGain = XP_VALUES[actionType];
+
+    const now = Date.now();
+    const todayStart = new Date(now).setHours(0, 0, 0, 0);
+    const xpActions = profile.xpActions || [];
+
+    const todaysActions = xpActions.filter(a => a.timestamp >= todayStart);
+    const todaysXP = todaysActions.reduce((sum, a) => sum + a.xp, 0);
+
+    if (profile.isInDistressMode && todaysXP >= DISTRESS_MODE_DAILY_XP_CAP) {
+      console.log('XP skipped: distress mode daily cap reached');
+      return { xpGain: 0, newLevel: profile.level, leveledUp: false, newUnlocks: [], capped: true };
+    }
+
+    const dailyCap = XP_DAILY_CAPS[actionType];
+    if (dailyCap !== undefined) {
+      const todaysCount = todaysActions.filter(a => a.type === actionType).length;
+      if (todaysCount >= dailyCap) {
+        console.log(`XP skipped: ${actionType} daily cap reached (${dailyCap})`);
+        return { xpGain: 0, newLevel: profile.level, leveledUp: false, newUnlocks: [], capped: true };
+      }
+    }
+
+    if (actionType === 'comeback-bonus') {
+      const lastActive = profile.lastActiveDate || profile.startDate;
+      const hoursSinceLastActive = (now - lastActive) / (1000 * 60 * 60);
+      if (hoursSinceLastActive < 24) {
+        console.log('XP skipped: comeback bonus requires 24h+ absence');
+        return { xpGain: 0, newLevel: profile.level, leveledUp: false, newUnlocks: [], capped: true };
+      }
+    }
+
+    const baseXP = XP_VALUES[actionType];
+    let xpGain = baseXP;
+
+    if (profile.isInDistressMode) {
+      const remainingDailyXP = DISTRESS_MODE_DAILY_XP_CAP - todaysXP;
+      if (xpGain > remainingDailyXP) {
+        xpGain = remainingDailyXP;
+        console.log(`XP reduced: distress mode daily cap (${xpGain}/${baseXP})`);
+      }
+    }
+
+    const newAction: XPAction = {
+      type: actionType,
+      xp: xpGain,
+      label: label || actionType,
+      timestamp: now,
+    };
+
     const newXP = profile.xp + xpGain;
     const newLevel = calculateLevel(newXP);
     const oldLevel = profile.level;
@@ -486,16 +551,21 @@ export const [AppProvider, useApp] = createContextHook(() => {
       if (newLevel >= 8) newUnlocks.push('emotion-patterns');
     }
 
+    const reduceCelebratory = profile.isInDistressMode;
+
     const newProfile = {
       ...profile,
       xp: newXP,
       level: newLevel,
       unlockedFeatures: [...(profile.unlockedFeatures || []), ...newUnlocks],
+      xpActions: [...xpActions, newAction],
+      lastActiveDate: now,
     };
     setProfile(newProfile);
     saveProfileMutation.mutate(newProfile);
 
-    return { xpGain, newLevel, leveledUp: newLevel > oldLevel, newUnlocks };
+    console.log(`XP awarded: +${xpGain} for ${actionType}`);
+    return { xpGain, newLevel, leveledUp: newLevel > oldLevel, newUnlocks, reduceCelebratory };
   };
 
   const changeCoachTone = (tone: 'warm' | 'neutral' | 'playful') => {
