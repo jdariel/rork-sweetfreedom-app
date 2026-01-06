@@ -54,13 +54,16 @@ export default function HomeScreen() {
   }, [showBreathing, totalTime, breathingPhase, phaseTimer]);
 
   const handleTap = () => {
+    console.log('[Home] handleTap called - navigating to coach');
     clearCoachConversation().catch(err => 
       console.error('[Home] Failed to clear coach conversation:', err)
     );
+    console.log('[Home] Calling router.push to /coach');
     router.push('/coach');
   };
 
   const handleLongPress = () => {
+    console.log('[Home] handleLongPress called - showing breathing modal');
     setShowBreathing(true);
     setBreathingPhase('inhale');
     setPhaseTimer(4);

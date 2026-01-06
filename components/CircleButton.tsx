@@ -68,6 +68,7 @@ export default function CircleButton({ onPress, onLongPress, size = 280 }: Circl
   const [isLongPressing, setIsLongPressing] = useState(false);
 
   const handlePressInCustom = () => {
+    console.log('[CircleButton] Press IN detected');
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -77,6 +78,7 @@ export default function CircleButton({ onPress, onLongPress, size = 280 }: Circl
     }).start();
 
     longPressTimerRef.current = setTimeout(() => {
+      console.log('[CircleButton] Long press triggered');
       setIsLongPressing(true);
       if (Platform.OS !== 'web') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -86,6 +88,7 @@ export default function CircleButton({ onPress, onLongPress, size = 280 }: Circl
   };
 
   const handlePressOutCustom = () => {
+    console.log('[CircleButton] Press OUT detected, isLongPressing:', isLongPressing);
     Animated.spring(pressScaleAnim, {
       toValue: 1,
       useNativeDriver: true,
@@ -97,7 +100,10 @@ export default function CircleButton({ onPress, onLongPress, size = 280 }: Circl
     }
 
     if (!isLongPressing) {
+      console.log('[CircleButton] Calling onPress callback');
       onPress();
+    } else {
+      console.log('[CircleButton] Skipping onPress (was long press)');
     }
     setIsLongPressing(false);
   };
