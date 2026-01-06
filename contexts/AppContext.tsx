@@ -551,6 +551,14 @@ export const [AppProvider, useApp] = createContextHook(() => {
     saveCoachMessagesMutation.mutate([]);
   };
 
+  const clearCoachConversation = async () => {
+    setCoachMessages([]);
+    saveCoachMessagesMutation.mutate([]);
+    const { clearAiTurns } = await import('@/utils/lessAiMemory');
+    await clearAiTurns();
+    console.log('[Coach] Conversation cleared');
+  };
+
   const clearAllData = async () => {
     try {
       await AsyncStorage.multiRemove([
@@ -894,6 +902,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     updateCravingDelayData,
     addCoachMessage,
     clearCoachMessages,
+    clearCoachConversation,
     clearAllData,
     exportData,
     markMessageHelpCheckComplete,

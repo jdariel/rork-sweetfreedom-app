@@ -7,7 +7,7 @@ import RewardModal from '@/components/RewardModal';
 import CircleButton from '@/components/CircleButton';
 
 export default function HomeScreen() {
-  const { pendingReward, dismissReward, addXP } = useApp();
+  const { pendingReward, dismissReward, addXP, clearCoachConversation } = useApp();
   const [showQuickPause, setShowQuickPause] = useState(false);
   const [pauseCountdown, setPauseCountdown] = useState(60);
   const [hasCheckedComeback, setHasCheckedComeback] = useState(false);
@@ -33,7 +33,8 @@ export default function HomeScreen() {
     };
   }, [showQuickPause, pauseCountdown]);
 
-  const handleTap = () => {
+  const handleTap = async () => {
+    await clearCoachConversation();
     router.push('/(tabs)/coach' as any);
   };
 
@@ -55,8 +56,9 @@ export default function HomeScreen() {
     closeQuickPause();
   };
 
-  const handleTalkToLess = () => {
+  const handleTalkToLess = async () => {
     closeQuickPause();
+    await clearCoachConversation();
     router.push('/(tabs)/coach' as any);
   };
 

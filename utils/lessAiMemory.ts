@@ -216,6 +216,15 @@ export async function addAiTurn(role: 'user' | 'assistant', content: string): Pr
   }
 }
 
+export async function clearAiTurns(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(STORAGE_KEYS.AI_TURNS);
+    console.log('AI turns cleared');
+  } catch (error) {
+    console.error('Error clearing AI turns:', error);
+  }
+}
+
 export function buildRecentStats(cravings: Craving[], now: number = Date.now()): RecentStats {
   const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
   const recent = cravings.filter(c => c.timestamp >= sevenDaysAgo);
