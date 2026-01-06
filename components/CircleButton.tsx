@@ -100,8 +100,8 @@ export default function CircleButton({ onPress, onLongPress, size = 280 }: Circl
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       delayLongPress={800}
-      accessibilityLabel="Handle a moment"
-      accessibilityHint="Tap to open coach, or long press to start a quick pause"
+      accessibilityLabel="Breathe"
+      accessibilityHint="Tap to start breathing exercise, or long press to talk to Less AI"
       style={styles.container}
     >
       <Animated.View
