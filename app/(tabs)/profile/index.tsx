@@ -1,13 +1,30 @@
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Share } from 'react-native';
 import { useApp } from '@/contexts/AppContext';
 import { goalModeData } from '@/constants/goalModes';
 import colors from '@/constants/colors';
-import { User, Target, Calendar, Award, AlertCircle, ExternalLink, Download, Trash2, MessageSquareOff, Gift } from 'lucide-react-native';
+import { User, Target, Calendar, Award, AlertCircle, ExternalLink, Download, Trash2, MessageSquareOff, Gift, Bug } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { loadUserInsightProfile, buildRecentStats, buildLessContextSnapshot } from '@/utils/lessAiMemory';
+import { UserInsightProfile } from '@/types';
 
 export default function ProfileScreen() {
   const { profile, streak, cravings, coachMessages, exportData, clearAllData, clearCoachMessages, getUnlockedItems } = useApp();
   const router = useRouter();
+  const [showDebug, setShowDebug] = useState<boolean>(false);
+  const [insightProfile, setInsightProfile] = useState<UserInsightProfile | null>(null);
+  const [contextSnapshot, setContextSnapshot] = useState<string>('');
+
+  useEffect(() => {
+    loadUserInsightProfile().then(profile => {
+      setInsightProfile(profile);
+      if (profile) {
+        const stats = buildRecentStats(cravings);
+        const snapshot = buildLessContextSnapshot(profile, stats);
+        setContextSnapshot(snapshot);
+      }
+    });
+  }, [cravings]);
 
   if (!profile) {
     return null;
@@ -184,6 +201,49 @@ export default function ProfileScreen() {
             <Text style={styles.tipItem}>• Track patterns to understand your triggers</Text>
           </View>
         </View>
+
+        {__DEV__ && (
+          <View style={styles.section}>
+            <TouchableOpacity 
+              style={styles.debugToggle}
+              onPress={() => setShowDebug(!showDebug)}
+            >
+              <Bug size={20} color={colors.textSecondary} />
+              <Text style={styles.debugToggleText}>
+                {showDebug ? 'Hide' : 'Show'} Less AI Debug
+              </Text>
+            </TouchableOpacity>
+            
+            {showDebug && (
+              <View style={styles.debugCard}>
+                <Text style={styles.debugSectionTitle}>UserInsightProfile</Text>
+                <View style={styles.debugContent}>
+                  <Text style={styles.debugText}>
+                    {JSON.stringify(insightProfile, null, 2)}
+                  </Text>
+                </View>
+                
+                <Text style={styles.debugSectionTitle}>Last Context Snapshot</Text>
+                <View style={styles.debugContent}>
+                  <Text style={styles.debugText}>{contextSnapshot}</Text>
+                </View>
+                
+                <Text style={styles.debugSectionTitle}>Stats</Text>
+                <View style={styles.debugContent}>
+                  <Text style={styles.debugText}>
+                    • Total cravings: {cravings.length}
+                  </Text>
+                  <Text style={styles.debugText}>
+                    • Coach messages: {coachMessages.length}
+                  </Text>
+                  <Text style={styles.debugText}>
+                    • Distress mode: {profile.isInDistressMode ? 'Active' : 'Inactive'}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Data Controls</Text>
@@ -530,5 +590,44 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 12,
     fontStyle: 'italic' as const,
+  },
+  debugToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  debugToggleText: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: colors.textSecondary,
+  },
+  debugCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  debugSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: colors.text,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  debugContent: {
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    padding: 12,
+  },
+  debugText: {
+    fontSize: 12,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    color: colors.textSecondary,
+    lineHeight: 18,
   },
 });

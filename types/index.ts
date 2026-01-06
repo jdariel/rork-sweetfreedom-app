@@ -143,3 +143,46 @@ export interface ReplacementSuggestion {
   category: 'fruit' | 'beverage' | 'protein' | 'activity' | 'mindful' | 'healthy-sweet';
   tags: string[];
 }
+
+export interface UserInsightProfile {
+  goalMode?: 'reduce' | 'quit' | 'weight' | 'health' | 'habit';
+  tonePreference?: 'professional-calm' | 'gentle' | 'direct';
+  peakCravingTimes?: string[];
+  topTriggers?: string[];
+  sweetPreferences?: string[];
+  commonEmotions?: string[];
+  delaySuccessRate7d?: number;
+  averageIntensityDrop7d?: number;
+  distressFlag?: boolean;
+  lastUpdatedISO?: string;
+}
+
+export interface AiTurn {
+  id: string;
+  timestampISO: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface LessAiResult {
+  assistantMessage: string;
+  classification: 'normal' | 'slip' | 'health_condition' | 'disordered_eating' | 'mental_distress' | 'crisis' | 'medical_request';
+  quickActions: string[];
+  memoryUpdates: {
+    goalMode: 'reduce' | 'quit' | 'weight' | 'health' | 'habit' | null;
+    addTriggers: string[];
+    addSweetPreferences: string[];
+    addPeakTimes: string[];
+    tonePreference: 'professional-calm' | 'gentle' | 'direct' | null;
+    distressFlag: boolean;
+  };
+}
+
+export interface RecentStats {
+  cravingsCount7d: number;
+  peakTimeBuckets: string[];
+  topEmotions: string[];
+  topTriggers: string[];
+  delayCompletionRate7d: number;
+  avgIntensityDropAfterDelay7d: number;
+}

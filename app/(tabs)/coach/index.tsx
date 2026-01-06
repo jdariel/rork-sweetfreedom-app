@@ -1,196 +1,83 @@
 import { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { useRorkAgent } from '@rork-ai/toolkit-sdk';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import colors from '@/constants/colors';
-import { Send, Sparkles, Heart, CheckCircle2, MessageCircle } from 'lucide-react-native';
+import { Send, Sparkles, Heart, CheckCircle2, MessageCircle, Play, Heart as HeartIcon, Sliders, ListChecks, Lightbulb, CalendarDays } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
-import { classifyMessage, buildSafePrompt, UserContextSnapshot, CoachResponse } from '@/utils/aiSafetyFilters';
+import { getLessAiReplyWithRetry } from '@/utils/lessAi';
+import { loadUserInsightProfile, saveUserInsightProfile, loadAiTurns, addAiTurn, buildRecentStats, applyMemoryUpdates } from '@/utils/lessAiMemory';
+import { useRouter } from 'expo-router';
+import { UserInsightProfile } from '@/types';
 
 export default function CoachScreen() {
   const [input, setInput] = useState<string>('');
   const scrollViewRef = useRef<ScrollView>(null);
-  const { coachMessages, addCoachMessage, clearCoachMessages, markMessageHelpCheckComplete, cravings, profile, streak, activateDistressMode, pauseStreak, addXP } = useApp();
-  const [isStreaming, setIsStreaming] = useState<boolean>(false);
-  const [streamingContent, setStreamingContent] = useState<string>('');
-  const streamTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const { messages, sendMessage, setMessages } = useRorkAgent({
-    tools: {},
-  });
+  const { coachMessages, addCoachMessage, cravings, profile, activateDistressMode, addXP } = useApp();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [insightProfile, setInsightProfile] = useState<UserInsightProfile | null>(null);
+  const [lastQuickActions, setLastQuickActions] = useState<string[]>([]);
+  const router = useRouter();
 
   useEffect(() => {
-    if (messages.length > 0) {
+    loadUserInsightProfile().then(setInsightProfile);
+  }, []);
+
+  useEffect(() => {
+    if (coachMessages.length > 0) {
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
-  }, [messages]);
+  }, [coachMessages]);
 
-  useEffect(() => {
-    if (messages.length > 0 && isStreaming) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage.role === 'assistant') {
-        const textParts = lastMessage.parts.filter(part => {
-          if (part.type !== 'text') return false;
-          const text = part.text.trim();
-          if (text.includes('<function_calls>') || 
-              text.includes('<invoke') || 
-              text.includes('</function_calls>')) {
-            return false;
-          }
-          return text.length > 0;
-        });
 
-        if (textParts.length > 0) {
-          let content = textParts.map(p => p.type === 'text' ? p.text : '').join('\n').trim();
-          if (content) {
-            content = content
-              .replace(/```json/g, '')
-              .replace(/```/g, '')
-              .replace(/^`+|`+$/g, '')
-              .trim();
-            
-            const jsonMatch = content.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              try {
-                let jsonStr = jsonMatch[0];
-                
-                const firstBrace = jsonStr.indexOf('{');
-                const lastBrace = jsonStr.lastIndexOf('}');
-                if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-                  jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
-                }
-                
-                const parsed = JSON.parse(jsonStr) as CoachResponse;
-                if (parsed.assistantMessage) {
-                  setStreamingContent(parsed.assistantMessage);
-                  if (parsed.memoryUpdates?.distressFlag) {
-                    activateDistressMode();
-                  }
-                } else {
-                  console.warn('No assistantMessage in parsed JSON:', parsed);
-                  setStreamingContent('I\'m here to help. Could you tell me more about what you\'re experiencing?');
-                }
-              } catch (e) {
-                console.error('Failed to parse AI response as JSON:', e);
-                console.error('Attempted to parse:', jsonMatch[0].substring(0, 200));
-                
-                if (content.length > 0 && !content.includes('{') && !content.includes('assistantMessage')) {
-                  setStreamingContent(content);
-                } else {
-                  setStreamingContent('I\'m here to help. Could you tell me more about what you\'re experiencing?');
-                }
-              }
-            } else {
-              if (!content.includes('{') && !content.includes('assistantMessage') && content.length > 10) {
-                setStreamingContent(content);
-              } else {
-                console.warn('No JSON match found in content:', content.substring(0, 100));
-                setStreamingContent('I\'m here to help. Could you tell me more about what you\'re experiencing?');
-              }
-            }
-          }
-        }
-      }
-    }
-  }, [messages, isStreaming, activateDistressMode]);
 
-  useEffect(() => {
-    if (messages.length > 0 && isStreaming && streamingContent) {
-      if (streamTimeoutRef.current) {
-        clearTimeout(streamTimeoutRef.current);
-      }
-      
-      streamTimeoutRef.current = setTimeout(() => {
-        const isDuplicate = coachMessages.some(m => 
-          m.content === streamingContent && m.role === 'assistant'
-        );
-        if (!isDuplicate) {
-          addCoachMessage({ role: 'assistant', content: streamingContent, needsHelpCheck: true });
-        }
-        setIsStreaming(false);
-        setStreamingContent('');
-      }, 1000);
-      
-      return () => {
-        if (streamTimeoutRef.current) {
-          clearTimeout(streamTimeoutRef.current);
-        }
-      };
-    }
-  }, [messages, isStreaming, streamingContent, coachMessages, addCoachMessage]);
-
-  const buildUserContext = (): UserContextSnapshot => {
-    const recentCravings = cravings.slice(-10);
-    const peakTimes = [...new Set(recentCravings.map(c => {
-      const hour = new Date(c.timestamp).getHours();
-      if (hour >= 5 && hour < 12) return 'morning';
-      if (hour >= 12 && hour < 17) return 'afternoon';
-      if (hour >= 17 && hour < 22) return 'evening';
-      return 'late night';
-    }))].slice(0, 3);
+  const handleSend = async () => {
+    if (!input.trim() || !insightProfile) return;
     
-    const triggers = [...new Set(recentCravings.map(c => c.emotion).filter(Boolean))].slice(0, 5);
-    const patterns = recentCravings.length > 0 
-      ? `Last ${Math.min(recentCravings.length, 5)} moments: ${recentCravings.slice(-5).map(c => c.emotion || 'unknown').join(', ')}`
-      : 'No recent patterns';
+    const userMessage = input.trim();
+    setInput('');
     
-    return {
-      goalMode: profile?.goalMode || 'not set',
-      cravingsLogged: cravings.length,
-      cravingsResisted: cravings.filter(c => c.outcome === 'resisted').length,
-      peakTimes,
-      triggers,
-      sweetPreferences: [],
-      tonePreference: profile?.coachTone || 'neutral',
-      distressFlag: profile?.isInDistressMode || false,
-      streakCurrent: streak.current,
-      recentPatterns: patterns,
-    };
-  };
-
-  const handleSend = () => {
-    if (input.trim()) {
-      const userMessage = input.trim();
+    addCoachMessage({ role: 'user', content: userMessage });
+    addXP('coach-message', 'Sent message to coach');
+    await addAiTurn('user', userMessage);
+    
+    setIsLoading(true);
+    
+    try {
+      const recentTurns = await loadAiTurns();
+      const stats = buildRecentStats(cravings);
       
-      const safetyAnalysis = classifyMessage(userMessage);
+      const result = await getLessAiReplyWithRetry({
+        userMessage,
+        profile: insightProfile,
+        recentTurns,
+        stats,
+        distressMode: profile?.isInDistressMode,
+      });
       
-      if (safetyAnalysis.shouldActivateDistressMode) {
+      addCoachMessage({ role: 'assistant', content: result.assistantMessage, needsHelpCheck: true });
+      await addAiTurn('assistant', result.assistantMessage);
+      
+      setLastQuickActions(result.quickActions);
+      
+      const updatedProfile = applyMemoryUpdates(insightProfile, result.memoryUpdates);
+      await saveUserInsightProfile(updatedProfile);
+      setInsightProfile(updatedProfile);
+      
+      if (result.memoryUpdates.distressFlag && !profile?.isInDistressMode) {
         activateDistressMode();
       }
       
-      if (safetyAnalysis.shouldPauseStreaks) {
-        pauseStreak();
-      }
-      
-      addCoachMessage({ role: 'user', content: userMessage });
-      addXP('coach-message', 'Sent message to coach');
-      
-      if (safetyAnalysis.shouldUseFallback && safetyAnalysis.fallbackResponse) {
-        addCoachMessage({ role: 'assistant', content: safetyAnalysis.fallbackResponse, needsHelpCheck: true });
-        setInput('');
-        return;
-      }
-      
-      const conversationHistory = coachMessages.map(m => 
-        `${m.role === 'user' ? 'User' : 'Coach'}: ${m.content}`
-      ).join('\n\n');
-      
-      const isFirstMessage = coachMessages.length === 0;
-      const userContext = buildUserContext();
-      
-      const contextPrompt = buildSafePrompt(
-        userMessage,
-        safetyAnalysis,
-        conversationHistory,
-        isFirstMessage,
-        userContext
-      );
-      
-      setIsStreaming(true);
-      setStreamingContent('');
-      sendMessage(contextPrompt);
-      setInput('');
+      console.log('[Coach] AI response completed, classification:', result.classification);
+    } catch (error) {
+      console.error('[Coach] Error getting AI response:', error);
+      addCoachMessage({ 
+        role: 'assistant', 
+        content: "I'm having trouble connecting right now. Could you try again?",
+        needsHelpCheck: false,
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -201,46 +88,80 @@ export default function CoachScreen() {
     "How do I delay this craving?",
   ];
 
-  const handleHelpResponse = (messageId: string, wasHelpful: boolean) => {
-    markMessageHelpCheckComplete(messageId);
-    
+  const quickActionLabels: Record<string, { label: string; icon: any; subtitle: string }> = {
+    start_pause: { label: 'Pause with me', icon: Play, subtitle: 'Just to slow things down — no decisions yet.' },
+    log_emotion: { label: 'Name the vibe', icon: HeartIcon, subtitle: 'All answers count.' },
+    log_intensity: { label: 'Check the volume', icon: Sliders, subtitle: 'How strong is it?' },
+    choose_outcome: { label: 'What happened?', icon: ListChecks, subtitle: 'Learning moment.' },
+    replacement_ideas: { label: 'Other options', icon: Lightbulb, subtitle: 'Try this instead.' },
+    weekly_reflection: { label: 'Look back together', icon: CalendarDays, subtitle: 'See your patterns.' },
+  };
+
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case 'start_pause':
+        router.push('/delay-flow');
+        break;
+      case 'log_emotion':
+      case 'log_intensity':
+        router.push('/log-craving');
+        break;
+      case 'choose_outcome':
+        router.push('/log-craving');
+        break;
+      case 'replacement_ideas':
+        router.push('/log-craving');
+        break;
+      case 'weekly_reflection':
+        router.push('/weekly-reflection');
+        break;
+    }
+  };
+
+  const handleHelpResponse = async (wasHelpful: boolean) => {
     if (wasHelpful) {
       addXP('coach-helped', 'Coach was helpful');
-      setTimeout(() => {
-        clearCoachMessages();
-        setMessages([]);
-      }, 500);
+      setLastQuickActions([]);
     } else {
+      if (!insightProfile) return;
+      
+      setIsLoading(true);
       const lastUserMessage = coachMessages
         .filter(m => m.role === 'user')
-        .slice(-1)[0]?.content || '';
+        .slice(-1)[0]?.content || 'I need more help';
       
-      const safetyAnalysis = classifyMessage(lastUserMessage);
-      
-      const conversationHistory = coachMessages.map(m => 
-        `${m.role === 'user' ? 'User' : 'Coach'}: ${m.content}`
-      ).join('\n\n');
-      
-      const userContext = buildUserContext();
-      
-      const contextPrompt = buildSafePrompt(
-        lastUserMessage,
-        safetyAnalysis,
-        conversationHistory,
-        false,
-        userContext
-      ) + '\n\n[USER FEEDBACK: Need more help - try different approach]';
-      
-      setIsStreaming(true);
-      setStreamingContent('');
-      sendMessage(contextPrompt);
+      try {
+        const recentTurns = await loadAiTurns();
+        const stats = buildRecentStats(cravings);
+        
+        const result = await getLessAiReplyWithRetry({
+          userMessage: lastUserMessage + ' [Need more help - try different approach]',
+          profile: insightProfile,
+          recentTurns,
+          stats,
+          distressMode: profile?.isInDistressMode,
+        });
+        
+        addCoachMessage({ role: 'assistant', content: result.assistantMessage, needsHelpCheck: true });
+        await addAiTurn('assistant', result.assistantMessage);
+        setLastQuickActions(result.quickActions);
+        
+        const updatedProfile = applyMemoryUpdates(insightProfile, result.memoryUpdates);
+        await saveUserInsightProfile(updatedProfile);
+        setInsightProfile(updatedProfile);
+      } catch (error) {
+        console.error('[Coach] Error in retry:', error);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
   const lastAIMessage = coachMessages.length > 0 && coachMessages[coachMessages.length - 1].role === 'assistant' 
     ? coachMessages[coachMessages.length - 1] 
     : null;
-  const shouldShowHelpCheck = lastAIMessage?.needsHelpCheck && !isStreaming;
+  const shouldShowHelpCheck = lastAIMessage?.needsHelpCheck && !isLoading;
+  const shouldShowQuickActions = lastQuickActions.length > 0 && !isLoading;
 
   return (
     <KeyboardAvoidingView 
@@ -262,37 +183,48 @@ export default function CoachScreen() {
               <TouchableOpacity
                 key={index}
                 style={styles.quickPromptButton}
-                onPress={() => {
-                  const safetyAnalysis = classifyMessage(prompt);
-                  
-                  if (safetyAnalysis.shouldActivateDistressMode) {
-                    activateDistressMode();
-                  }
-                  
-                  if (safetyAnalysis.shouldPauseStreaks) {
-                    pauseStreak();
-                  }
+                onPress={async () => {
+                  if (!insightProfile) return;
                   
                   addCoachMessage({ role: 'user', content: prompt });
                   addXP('coach-message', 'Sent message to coach');
+                  await addAiTurn('user', prompt);
                   
-                  if (safetyAnalysis.shouldUseFallback && safetyAnalysis.fallbackResponse) {
-                    addCoachMessage({ role: 'assistant', content: safetyAnalysis.fallbackResponse, needsHelpCheck: true });
-                    return;
+                  setIsLoading(true);
+                  
+                  try {
+                    const recentTurns = await loadAiTurns();
+                    const stats = buildRecentStats(cravings);
+                    
+                    const result = await getLessAiReplyWithRetry({
+                      userMessage: prompt,
+                      profile: insightProfile,
+                      recentTurns,
+                      stats,
+                      distressMode: profile?.isInDistressMode,
+                    });
+                    
+                    addCoachMessage({ role: 'assistant', content: result.assistantMessage, needsHelpCheck: true });
+                    await addAiTurn('assistant', result.assistantMessage);
+                    setLastQuickActions(result.quickActions);
+                    
+                    const updatedProfile = applyMemoryUpdates(insightProfile, result.memoryUpdates);
+                    await saveUserInsightProfile(updatedProfile);
+                    setInsightProfile(updatedProfile);
+                    
+                    if (result.memoryUpdates.distressFlag) {
+                      activateDistressMode();
+                    }
+                  } catch (error) {
+                    console.error('[Coach] Error:', error);
+                    addCoachMessage({ 
+                      role: 'assistant', 
+                      content: "I'm having trouble connecting. Could you try again?",
+                      needsHelpCheck: false,
+                    });
+                  } finally {
+                    setIsLoading(false);
                   }
-                  
-                  const userContext = buildUserContext();
-                  const contextPrompt = buildSafePrompt(
-                    prompt,
-                    safetyAnalysis,
-                    '',
-                    true,
-                    userContext
-                  );
-                  
-                  setIsStreaming(true);
-                  setStreamingContent('');
-                  sendMessage(contextPrompt);
                 }}
               >
                 <Text style={styles.quickPromptText}>{prompt}</Text>
@@ -332,17 +264,40 @@ export default function CoachScreen() {
               </View>
             </View>
           ))}
-          {isStreaming && streamingContent && (
+          {isLoading && (
             <View style={styles.messageWrapper}>
               <View style={styles.coachIconContainer}>
                 <Heart size={16} color={colors.primary} fill={colors.primary} />
               </View>
               <View style={styles.messageContent}>
                 <View style={[styles.messageBubble, styles.assistantBubble]}>
-                  <Text style={[styles.messageText, styles.assistantText]}>
-                    {streamingContent}
-                  </Text>
+                  <ActivityIndicator size="small" color={colors.primary} />
                 </View>
+              </View>
+            </View>
+          )}
+          {shouldShowQuickActions && (
+            <View style={styles.quickActionsContainer}>
+              <Text style={styles.quickActionsTitle}>Try this:</Text>
+              <View style={styles.quickActionsGrid}>
+                {lastQuickActions.slice(0, 3).map((action) => {
+                  const actionData = quickActionLabels[action];
+                  if (!actionData) return null;
+                  const Icon = actionData.icon;
+                  return (
+                    <TouchableOpacity
+                      key={action}
+                      style={styles.quickActionCard}
+                      onPress={() => handleQuickAction(action)}
+                    >
+                      <View style={styles.quickActionIcon}>
+                        <Icon size={20} color={colors.primary} />
+                      </View>
+                      <Text style={styles.quickActionLabel}>{actionData.label}</Text>
+                      <Text style={styles.quickActionSubtitle}>{actionData.subtitle}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
           )}
@@ -352,14 +307,14 @@ export default function CoachScreen() {
               <View style={styles.helpCheckButtons}>
                 <TouchableOpacity
                   style={styles.helpCheckButton}
-                  onPress={() => handleHelpResponse(lastAIMessage.id, true)}
+                  onPress={() => handleHelpResponse(true)}
                 >
                   <CheckCircle2 size={18} color={colors.calm.teal} />
                   <Text style={styles.helpCheckButtonText}>Yes, thanks</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.helpCheckButton, styles.helpCheckButtonSecondary]}
-                  onPress={() => handleHelpResponse(lastAIMessage.id, false)}
+                  onPress={() => handleHelpResponse(false)}
                 >
                   <MessageCircle size={18} color={colors.textSecondary} />
                   <Text style={[styles.helpCheckButtonText, styles.helpCheckButtonTextSecondary]}>Need more help</Text>
@@ -570,5 +525,51 @@ const styles = StyleSheet.create({
   },
   helpCheckButtonTextSecondary: {
     color: colors.textSecondary,
+  },
+  quickActionsContainer: {
+    marginTop: 16,
+    marginLeft: 40,
+    marginBottom: 12,
+  },
+  quickActionsTitle: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: colors.textSecondary,
+    marginBottom: 12,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  quickActionCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    minWidth: 100,
+    maxWidth: '48%',
+    flex: 1,
+  },
+  quickActionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.calm.tealLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  quickActionLabel: {
+    fontSize: 14,
+    fontWeight: '600' as const,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  quickActionSubtitle: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    lineHeight: 14,
   },
 });
