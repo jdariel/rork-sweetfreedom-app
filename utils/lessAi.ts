@@ -175,11 +175,24 @@ export async function getLessAiReplyWithRetry(params: {
     }
     
     const response = await generateText({ messages: [{ role: 'user', content: prompt }] });
+    
+    if (!response || typeof response !== 'string') {
+      console.error('[Less AI] Invalid response type:', typeof response);
+      return getSafeFallback(userMessage);
+    }
+    
     console.log('[Less AI] Received response:', response.substring(0, 200));
     
-    const jsonStr = extractJsonFromText(response);
+    let jsonStr: string | null = null;
     
-    if (!jsonStr) {
+    try {
+      jsonStr = extractJsonFromText(response);
+    } catch (extractError) {
+      console.error('[Less AI] Error extracting JSON:', extractError);
+      return getSafeFallback(userMessage);
+    }
+    
+    if (!jsonStr || jsonStr.trim().length === 0) {
       console.warn('[Less AI] No JSON found in response, attempting retry...');
       console.log('[Less AI] Raw response that failed:', response.substring(0, 500));
       
