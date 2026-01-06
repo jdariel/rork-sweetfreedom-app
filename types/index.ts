@@ -204,3 +204,53 @@ export interface RecentStats {
   delayCompletionRate7d: number;
   avgIntensityDropAfterDelay7d: number;
 }
+
+export type RewardCategory = 'theme' | 'circleStyle' | 'tonePack' | 'insight' | 'qol' | 'deckSkin';
+
+export type RewardRarity = 'standard' | 'surprise';
+
+export interface RewardItem {
+  id: string;
+  category: RewardCategory;
+  name: string;
+  description: string;
+  isUnlocked: boolean;
+  unlockedAtISO?: string;
+  isEquipped?: boolean;
+  rarity?: RewardRarity;
+}
+
+export interface RewardsState {
+  totalXP: number;
+  level: number;
+  unlocks: Record<string, RewardItem>;
+  equipped: {
+    themeId: string;
+    circleStyleId: string;
+    tonePackId: string;
+    deckSkinId: string;
+  };
+  lastRewardAtISO?: string;
+  rewardHistory: { id: string; atISO: string; reason: string }[];
+  quietModeEnabled?: boolean;
+}
+
+export type XpReason = 
+  | 'log-moment'
+  | 'start-pause'
+  | 'complete-1min-pause'
+  | 'complete-full-pause'
+  | 'post-pause-checkin'
+  | 'choose-outcome'
+  | 'coach-message'
+  | 'coach-helped'
+  | 'weekly-deck-open'
+  | 'flip-all-cards'
+  | 'save-highlight'
+  | 'comeback-24h';
+
+export interface XpEvent {
+  reason: XpReason;
+  amount: number;
+  timestamp: number;
+}

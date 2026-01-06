@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Keyboa
 import colors from '@/constants/colors';
 import { Send, Sparkles, Heart, CheckCircle2, MessageCircle, Play, Heart as HeartIcon, Sliders, ListChecks, Lightbulb, CalendarDays } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
+import { useRewards } from '@/contexts/RewardsContext';
 import { getLessAiReplyWithRetry } from '@/utils/lessAi';
 import { loadUserInsightProfile, saveUserInsightProfile, loadAiTurns, addAiTurn, buildRecentStats, applyMemoryUpdates, inferSignalsFromUserText, incrementStat, clearAiTurns } from '@/utils/lessAiMemory';
 import { useRouter } from 'expo-router';
@@ -11,7 +12,8 @@ import { UserInsightProfile } from '@/types';
 export default function CoachScreen() {
   const [input, setInput] = useState<string>('');
   const scrollViewRef = useRef<ScrollView>(null);
-  const { coachMessages, addCoachMessage, cravings, profile, activateDistressMode, addXP, markMessageHelpCheckComplete, clearCoachConversation } = useApp();
+  const { coachMessages, addCoachMessage, cravings, profile, activateDistressMode, markMessageHelpCheckComplete, clearCoachConversation } = useApp();
+  const { awardXP } = useRewards();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [insightProfile, setInsightProfile] = useState<UserInsightProfile | null>(null);
   const [lastQuickActions, setLastQuickActions] = useState<string[]>([]);
@@ -46,7 +48,7 @@ export default function CoachScreen() {
     }
     
     addCoachMessage({ role: 'user', content: userMessage });
-    addXP('coach-message', 'Sent message to coach');
+    awardXP('coach-message', profile?.isInDistressMode || false, profile?.lastActiveDate);
     await addAiTurn('user', userMessage);
     
     setIsLoading(true);
@@ -173,7 +175,7 @@ export default function CoachScreen() {
 
   const handleHelpResponse = async (wasHelpful: boolean, messageId: string) => {
     if (wasHelpful) {
-      addXP('coach-helped', 'Coach was helpful');
+      awardXP('coach-helped', profile?.isInDistressMode || false, profile?.lastActiveDate);
       setLastQuickActions([]);
       markMessageHelpCheckComplete(messageId);
       
@@ -245,7 +247,7 @@ export default function CoachScreen() {
                   if (!insightProfile) return;
                   
                   addCoachMessage({ role: 'user', content: prompt });
-                  addXP('coach-message', 'Sent message to coach');
+                  awardXP('coach-message', profile?.isInDistressMode || false, profile?.lastActiveDate);
                   await addAiTurn('user', prompt);
                   
                   setIsLoading(true);

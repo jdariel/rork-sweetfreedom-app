@@ -6,11 +6,13 @@ import colors from '@/constants/colors';
 import { replacementSuggestions } from '@/constants/goalModes';
 import { Clock, CheckCircle, X, MessageCircle, ThumbsUp, Smile, Brain, Star, EyeOff } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
+import { useRewards } from '@/contexts/RewardsContext';
 import * as Haptics from 'expo-haptics';
 
 export default function DelayFlowScreen() {
   const { cravingId } = useLocalSearchParams<{ cravingId: string }>();
-  const { updateCravingFeedback, updateCravingDelayUsed, updateCravingOutcome, updateCravingDelayData, profile, toggleFavoriteReplacement, toggleHiddenReplacement, addXP, triggerReward, recordReplacementSelection, getPersonalizedReplacements, incrementPausesCompleted } = useApp();
+  const { updateCravingFeedback, updateCravingDelayUsed, updateCravingOutcome, updateCravingDelayData, profile, toggleFavoriteReplacement, toggleHiddenReplacement, recordReplacementSelection, getPersonalizedReplacements, incrementPausesCompleted } = useApp();
+  const { awardXP, triggerSurpriseReward } = useRewards();
   const [stage, setStage] = useState<'delay' | 'suggestions' | 'feedback' | 'outcome' | 'complete'>('delay');
   const [countdown, setCountdown] = useState<number>(300);
   const [hasAwarded1Min, setHasAwarded1Min] = useState<boolean>(false);
@@ -31,7 +33,7 @@ export default function DelayFlowScreen() {
         setCountdown((prev) => {
           const newCount = prev - 1;
           if (newCount === 240 && !hasAwarded1Min) {
-            addXP('delay-1min', 'Completed 1 minute of pause');
+            awardXP('complete-1min-pause', profile?.isInDistressMode || false, profile?.lastActiveDate);
             setHasAwarded1Min(true);
           }
           return newCount;
@@ -39,7 +41,7 @@ export default function DelayFlowScreen() {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [stage, countdown, hasAwarded1Min, addXP]);
+  }, [stage, countdown, hasAwarded1Min, awardXP, profile?.isInDistressMode, profile?.lastActiveDate]);
 
   useEffect(() => {
     const pulse = Animated.loop(
@@ -133,8 +135,9 @@ export default function DelayFlowScreen() {
     }
     
     if (delayDuration >= 300) {
-      addXP('delay-complete', 'Completed full 5-minute pause');
+      awardXP('complete-full-pause', profile?.isInDistressMode || false, profile?.lastActiveDate);
       incrementPausesCompleted();
+      triggerSurpriseReward('delay-complete', profile?.isInDistressMode || false);
     }
     
     console.log('Delay completed:', delayDuration, 'sec, Engagement:', engagementSec, 'sec');
@@ -170,7 +173,7 @@ export default function DelayFlowScreen() {
     if (cravingId) {
       updateCravingFeedback(cravingId, postDelayIntensity, whatHelped || undefined);
     }
-    addXP('post-delay-checkin', 'Post-delay check-in');
+    awardXP('post-pause-checkin', profile?.isInDistressMode || false, profile?.lastActiveDate);
     setStage('outcome');
   };
 
@@ -178,8 +181,7 @@ export default function DelayFlowScreen() {
     if (cravingId) {
       updateCravingOutcome(cravingId, outcome);
     }
-    addXP('select-outcome', `Selected outcome: ${outcome}`);
-    triggerReward('delay-complete');
+    awardXP('choose-outcome', profile?.isInDistressMode || false, profile?.lastActiveDate);
     setStage('complete');
     setTimeout(() => {
       router.back();
@@ -463,7 +465,7 @@ export default function DelayFlowScreen() {
             if (cravingId) {
               updateCravingDelayUsed(cravingId);
             }
-            addXP('delay-start');
+            awardXP('start-pause', profile?.isInDistressMode || false, profile?.lastActiveDate);
             setStage('suggestions');
           }}
           onPressIn={() => {

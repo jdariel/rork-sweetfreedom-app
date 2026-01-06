@@ -5,6 +5,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated, ScrollView } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '@/constants/colors';
 import { useApp } from '@/contexts/AppContext';
+import { useRewards } from '@/contexts/RewardsContext';
 import { X, Sparkles, Clock, Smile, Heart, TrendingDown } from 'lucide-react-native';
 import { WeeklyInsight } from '@/types';
 
@@ -81,7 +82,8 @@ function FlippableCard({ title, frontContent, backContent, icon, isFlipped, onFl
 }
 
 export default function WeeklyReflectionScreen() {
-  const { cravings, profile, triggerReward, addXP } = useApp();
+  const { cravings, profile } = useApp();
+  const { awardXP, triggerSurpriseReward } = useRewards();
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
   const [hasOpenedDeck, setHasOpenedDeck] = useState(false);
 
@@ -153,10 +155,10 @@ export default function WeeklyReflectionScreen() {
 
   useEffect(() => {
     if (!hasOpenedDeck && weeklyInsight.totalMoments > 0) {
-      addXP('weekly-deck-open', 'Opened weekly reflection');
+      awardXP('weekly-deck-open', profile?.isInDistressMode || false, profile?.lastActiveDate);
       setHasOpenedDeck(true);
     }
-  }, [hasOpenedDeck, weeklyInsight.totalMoments, addXP]);
+  }, [hasOpenedDeck, weeklyInsight.totalMoments, awardXP, profile?.isInDistressMode, profile?.lastActiveDate]);
 
   const toggleCardFlip = (index: number) => {
     setFlippedCards(prev => {
@@ -169,7 +171,7 @@ export default function WeeklyReflectionScreen() {
       
       const totalCards = weeklyInsight.avgIntensityDrop > 0 ? 4 : 3;
       if (newSet.size === totalCards) {
-        addXP('weekly-deck-complete', 'Flipped all reflection cards');
+        awardXP('flip-all-cards', profile?.isInDistressMode || false, profile?.lastActiveDate);
       }
       
       return newSet;
@@ -177,14 +179,15 @@ export default function WeeklyReflectionScreen() {
   };
 
   const handleComplete = () => {
-    addXP('weekly-highlight-save', 'Saved weekly highlights');
+    awardXP('save-highlight', profile?.isInDistressMode || false, profile?.lastActiveDate);
+    triggerSurpriseReward('weekly-reflection', profile?.isInDistressMode || false);
     
     if (profile) {
       const lastViewed = profile.weeklyReflectionLastViewed || 0;
       const daysSinceViewed = (Date.now() - lastViewed) / (1000 * 60 * 60 * 24);
       
       if (daysSinceViewed >= 6) {
-        triggerReward('weekly-reflection');
+        triggerSurpriseReward('reflection', profile?.isInDistressMode || false);
       }
     }
     router.back();

@@ -1,13 +1,16 @@
 import { router } from 'expo-router';
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { useApp } from '@/contexts/AppContext';
+import { useRewards } from '@/contexts/RewardsContext';
 import colors from '@/constants/colors';
 import { useState, useEffect, useRef } from 'react';
-import RewardModal from '@/components/RewardModal';
+import CalmRewardModal from '@/components/CalmRewardModal';
+import LevelUpModal from '@/components/LevelUpModal';
 import CircleButton from '@/components/CircleButton';
 
 export default function HomeScreen() {
-  const { pendingReward, dismissReward, addXP, clearCoachConversation } = useApp();
+  const { clearCoachConversation, profile } = useApp();
+  const { pendingReward, pendingLevelUp, dismissPendingReward, dismissPendingLevelUp, awardXP, equipReward } = useRewards();
   const [showBreathing, setShowBreathing] = useState(false);
   const [breathingPhase, setBreathingPhase] = useState<'inhale' | 'hold' | 'exhale'>('inhale');
   const [phaseTimer, setPhaseTimer] = useState(4);
@@ -17,10 +20,10 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (!hasCheckedComeback) {
-      addXP('comeback-bonus', 'Welcome back!');
+      awardXP('comeback-24h', profile?.isInDistressMode || false, profile?.lastActiveDate);
       setHasCheckedComeback(true);
     }
-  }, [hasCheckedComeback, addXP]);
+  }, [hasCheckedComeback, awardXP, profile?.isInDistressMode, profile?.lastActiveDate]);
 
   useEffect(() => {
     if (showBreathing && totalTime > 0) {
@@ -73,7 +76,7 @@ export default function HomeScreen() {
   };
 
   const handleBreathingDone = () => {
-    addXP('delay-1min', 'Completed breathing exercise');
+    awardXP('complete-1min-pause', profile?.isInDistressMode || false, profile?.lastActiveDate);
     closeBreathing();
   };
 
@@ -154,10 +157,27 @@ export default function HomeScreen() {
         </View>
       </Modal>
 
-      <RewardModal 
+      <CalmRewardModal 
         reward={pendingReward}
         visible={!!pendingReward}
-        onDismiss={dismissReward}
+        onDismiss={dismissPendingReward}
+        onTryNow={() => {
+          if (pendingReward) {
+            equipReward(pendingReward.id);
+          }
+        }}
+      />
+      
+      <LevelUpModal
+        level={pendingLevelUp?.level || 0}
+        reward={pendingLevelUp?.reward || null}
+        visible={!!pendingLevelUp}
+        onDismiss={dismissPendingLevelUp}
+        onUseNow={() => {
+          if (pendingLevelUp?.reward) {
+            equipReward(pendingLevelUp.reward.id);
+          }
+        }}
       />
     </View>
   );
