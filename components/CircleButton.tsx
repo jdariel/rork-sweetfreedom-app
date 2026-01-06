@@ -62,7 +62,12 @@ export default function CircleButton({ onPress, onLongPress, size = 280 }: Circl
     };
   }, [breathingScaleAnim, glowAnim, reduceMotion]);
 
-  const handlePressIn = () => {
+
+
+  const longPressTimerRef = useRef<number | null>(null);
+  const [isLongPressing, setIsLongPressing] = useState(false);
+
+  const handlePressInCustom = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -70,20 +75,31 @@ export default function CircleButton({ onPress, onLongPress, size = 280 }: Circl
       toValue: 0.95,
       useNativeDriver: true,
     }).start();
+
+    longPressTimerRef.current = setTimeout(() => {
+      setIsLongPressing(true);
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+      onLongPress();
+    }, 800);
   };
 
-  const handlePressOut = () => {
+  const handlePressOutCustom = () => {
     Animated.spring(pressScaleAnim, {
       toValue: 1,
       useNativeDriver: true,
     }).start();
-  };
 
-  const handleLongPressAction = () => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
     }
-    onLongPress();
+
+    if (!isLongPressing) {
+      onPress();
+    }
+    setIsLongPressing(false);
   };
 
   const glowOpacity = glowAnim.interpolate({
@@ -95,11 +111,8 @@ export default function CircleButton({ onPress, onLongPress, size = 280 }: Circl
 
   return (
     <Pressable
-      onPress={onPress}
-      onLongPress={handleLongPressAction}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      delayLongPress={800}
+      onPressIn={handlePressInCustom}
+      onPressOut={handlePressOutCustom}
       accessibilityLabel="Breathe"
       accessibilityHint="Tap to talk to Less AI, or long press for breathing exercise"
       style={styles.container}
