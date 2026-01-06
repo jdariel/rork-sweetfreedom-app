@@ -38,17 +38,26 @@ const XP_DAILY_CAPS: Partial<Record<XPAction['type'], number>> = {
 
 const DISTRESS_MODE_DAILY_XP_CAP = 60;
 
-const LEVEL_THRESHOLDS = [0, 100, 250, 450, 700, 1000, 1400, 1850, 2350, 2900, 3500];
+const LEVEL_THRESHOLDS = [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850, 4500, 5200, 5950];
 
 const calculateLevel = (xp: number): number => {
-  for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
-    if (xp >= LEVEL_THRESHOLDS[i]) return i;
+  if (xp < LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1]) {
+    for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
+      if (xp >= LEVEL_THRESHOLDS[i]) return i;
+    }
+    return 0;
   }
-  return 0;
+  const xpAfter15 = xp - LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
+  const levelsAfter15 = Math.floor(xpAfter15 / 900);
+  return LEVEL_THRESHOLDS.length - 1 + levelsAfter15;
 };
 
 const getXPForNextLevel = (level: number): number => {
-  return LEVEL_THRESHOLDS[level + 1] || LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
+  if (level < LEVEL_THRESHOLDS.length - 1) {
+    return LEVEL_THRESHOLDS[level + 1];
+  }
+  const levelsAfter15 = level - (LEVEL_THRESHOLDS.length - 1);
+  return LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1] + (levelsAfter15 + 1) * 900;
 };
 
 export const [AppProvider, useApp] = createContextHook(() => {
