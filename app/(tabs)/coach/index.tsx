@@ -11,7 +11,7 @@ import { UserInsightProfile } from '@/types';
 export default function CoachScreen() {
   const [input, setInput] = useState<string>('');
   const scrollViewRef = useRef<ScrollView>(null);
-  const { coachMessages, addCoachMessage, cravings, profile, activateDistressMode, addXP } = useApp();
+  const { coachMessages, addCoachMessage, cravings, profile, activateDistressMode, addXP, markMessageHelpCheckComplete } = useApp();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [insightProfile, setInsightProfile] = useState<UserInsightProfile | null>(null);
   const [lastQuickActions, setLastQuickActions] = useState<string[]>([]);
@@ -163,10 +163,11 @@ export default function CoachScreen() {
     }
   };
 
-  const handleHelpResponse = async (wasHelpful: boolean) => {
+  const handleHelpResponse = async (wasHelpful: boolean, messageId: string) => {
     if (wasHelpful) {
       addXP('coach-helped', 'Coach was helpful');
       setLastQuickActions([]);
+      markMessageHelpCheckComplete(messageId);
     } else {
       if (!insightProfile) return;
       
@@ -397,14 +398,14 @@ export default function CoachScreen() {
               <View style={styles.helpCheckButtons}>
                 <TouchableOpacity
                   style={styles.helpCheckButton}
-                  onPress={() => handleHelpResponse(true)}
+                  onPress={() => handleHelpResponse(true, lastAIMessage.id)}
                 >
                   <CheckCircle2 size={18} color={colors.calm.teal} />
                   <Text style={styles.helpCheckButtonText}>Yes, thanks</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.helpCheckButton, styles.helpCheckButtonSecondary]}
-                  onPress={() => handleHelpResponse(false)}
+                  onPress={() => handleHelpResponse(false, lastAIMessage.id)}
                 >
                   <MessageCircle size={18} color={colors.textSecondary} />
                   <Text style={[styles.helpCheckButtonText, styles.helpCheckButtonTextSecondary]}>Need more help</Text>
