@@ -1,20 +1,104 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform } from 'react-native';
+import { useState, useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, PanResponder, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '@/contexts/AppContext';
 import { SweetType, Emotion } from '@/types';
 import { sweetTypes, emotions } from '@/constants/goalModes';
 import colors from '@/constants/colors';
-import { X } from 'lucide-react-native';
+import { X, Zap } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 export default function LogCravingScreen() {
-  const { addCraving, addXP } = useApp();
+  const { addCraving, addXP, cravings } = useApp();
   const [sweetType, setSweetType] = useState<SweetType | null>(null);
   const [intensity, setIntensity] = useState<number>(5);
   const [emotion, setEmotion] = useState<Emotion | null>(null);
   const [notes, setNotes] = useState<string>('');
+  const [intensityAnim] = useState(new Animated.Value(0.5));
+  const [glowIntensity] = useState(new Animated.Value(0.5));
+  const [dragValue, setDragValue] = useState(0.5);
+
+  const smartDefaults = useMemo(() => {
+    if (cravings.length === 0) return { emotion: null, sweetType: null, intensity: 5 };
+    
+    const recent = cravings.slice(-10);
+    const emotionCounts: Record<string, number> = {};
+    const sweetCounts: Record<string, number> = {};
+    let totalIntensity = 0;
+    
+    recent.forEach(c => {
+      emotionCounts[c.emotion] = (emotionCounts[c.emotion] || 0) + 1;
+      sweetCounts[c.sweetType] = (sweetCounts[c.sweetType] || 0) + 1;
+      totalIntensity += c.intensity;
+    });
+    
+    const topEmotion = Object.entries(emotionCounts).sort((a, b) => b[1] - a[1])[0]?.[0] as Emotion | null;
+    const topSweet = Object.entries(sweetCounts).sort((a, b) => b[1] - a[1])[0]?.[0] as SweetType | null;
+    const avgIntensity = Math.round(totalIntensity / recent.length);
+    
+    return { emotion: topEmotion, sweetType: topSweet, intensity: avgIntensity || 5 };
+  }, [cravings]);
+
+  useEffect(() => {
+    const initialValue = (smartDefaults.intensity - 1) / 9;
+    if (smartDefaults.emotion && !emotion) {
+      setEmotion(smartDefaults.emotion);
+    }
+    if (smartDefaults.sweetType && !sweetType) {
+      setSweetType(smartDefaults.sweetType);
+    }
+    if (smartDefaults.intensity) {
+      setIntensity(smartDefaults.intensity);
+      setDragValue(initialValue);
+      intensityAnim.setValue(initialValue);
+      glowIntensity.setValue(initialValue);
+    }
+  }, [smartDefaults, emotion, sweetType, intensityAnim, glowIntensity]);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => {
+          if (Platform.OS !== 'web') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }
+        },
+        onPanResponderMove: (_, gestureState) => {
+          const newValue = Math.max(0, Math.min(1, dragValue - gestureState.dy / 200));
+          setDragValue(newValue);
+          intensityAnim.setValue(newValue);
+          glowIntensity.setValue(newValue);
+          const newIntensity = Math.round(newValue * 9) + 1;
+          if (newIntensity !== intensity) {
+            setIntensity(newIntensity);
+            if (Platform.OS !== 'web') {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+          }
+        },
+        onPanResponderRelease: () => {
+          if (Platform.OS !== 'web') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          }
+        },
+      }),
+    [intensityAnim, glowIntensity, intensity, dragValue]
+  );
+
+  const glowColor = glowIntensity.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [colors.calm.tealLight, colors.warning, colors.error],
+  });
+
+  const intensityLabel = useMemo(() => {
+    if (intensity <= 3) return 'Soft';
+    if (intensity <= 6) return 'Medium';
+    if (intensity <= 8) return 'Strong';
+    return 'Very Strong';
+  }, [intensity]);
 
   const handleSubmit = () => {
     if (!sweetType || !emotion) return;
@@ -77,37 +161,39 @@ export default function LogCravingScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Intensity (1-10)</Text>
+          <Text style={styles.sectionTitle}>How loud is it right now?</Text>
           <View style={styles.intensityContainer}>
-            <View style={styles.intensityButtons}>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                <TouchableOpacity
-                  key={num}
-                  style={[
-                    styles.intensityButton,
-                    intensity === num && styles.intensityButtonSelected
-                  ]}
-                  onPress={() => setIntensity(num)}
-                  onPressIn={() => {
-                    if (Platform.OS !== 'web') {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }
-                  }}
-                >
-                  <Text style={[
-                    styles.intensityButtonText,
-                    intensity === num && styles.intensityButtonTextSelected
-                  ]}>
-                    {num}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <View style={styles.intensityDragContainer} {...panResponder.panHandlers}>
+              <Animated.View
+                style={[
+                  styles.intensityOrb,
+                  {
+                    backgroundColor: glowColor,
+                    transform: [
+                      {
+                        scale: Animated.add(
+                          1,
+                          Animated.multiply(glowIntensity, 0.5)
+                        ),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <Zap size={32} color={colors.surface} />
+              </Animated.View>
+              <Text style={styles.intensityValue}>{intensity}</Text>
+              <Text style={styles.intensityLabel}>{intensityLabel}</Text>
+              <Text style={styles.intensityHint}>Drag up or down</Text>
             </View>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>How are you feeling?</Text>
+          <Text style={styles.sectionTitle}>What&apos;s underneath this moment?</Text>
+          {smartDefaults.emotion && emotion === smartDefaults.emotion && (
+            <Text style={styles.smartDefaultHint}>Based on your patterns ✨</Text>
+          )}
           <View style={styles.optionsGrid}>
             {emotions.map((item) => (
               <TouchableOpacity
@@ -136,10 +222,10 @@ export default function LogCravingScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notes (optional)</Text>
+          <Text style={styles.sectionTitle}>Anything else? (optional)</Text>
           <TextInput
             style={styles.textInput}
-            placeholder="Add any additional notes..."
+            placeholder="What's on your mind?"
             placeholderTextColor={colors.textLight}
             value={notes}
             onChangeText={setNotes}
@@ -161,7 +247,7 @@ export default function LogCravingScreen() {
           disabled={!sweetType || !emotion}
         >
           <Text style={[styles.submitButtonText, (!sweetType || !emotion) && styles.submitButtonTextDisabled]}>
-            Continue
+            {sweetType && emotion ? "That's it" : 'Continue'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -240,35 +326,46 @@ const styles = StyleSheet.create({
   intensityContainer: {
     backgroundColor: colors.surface,
     borderRadius: 16,
-    padding: 16,
+    padding: 32,
   },
-  intensityButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  intensityButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: colors.background,
-    borderWidth: 2,
-    borderColor: colors.border,
+  intensityDragContainer: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  intensityButtonSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.calm.tealLight,
+  intensityOrb: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  intensityButtonText: {
-    fontSize: 16,
+  intensityValue: {
+    fontSize: 48,
+    fontWeight: '700' as const,
+    color: colors.text,
+    marginBottom: 4,
+  },
+  intensityLabel: {
+    fontSize: 18,
     fontWeight: '600' as const,
     color: colors.textSecondary,
+    marginBottom: 8,
   },
-  intensityButtonTextSelected: {
-    color: colors.primaryDark,
-    fontWeight: '700' as const,
+  intensityHint: {
+    fontSize: 14,
+    color: colors.textLight,
+  },
+  smartDefaultHint: {
+    fontSize: 13,
+    color: colors.primary,
+    marginBottom: 12,
+    fontWeight: '600' as const,
   },
   textInput: {
     backgroundColor: colors.surface,

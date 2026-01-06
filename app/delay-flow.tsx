@@ -210,8 +210,8 @@ export default function DelayFlowScreen() {
               <ThumbsUp size={32} color={colors.success} />
             </View>
             <View style={styles.outcomeTextContainer}>
-              <Text style={styles.outcomeTitle}>I didn&apos;t eat it</Text>
-              <Text style={styles.outcomeDescription}>Resisted the craving</Text>
+              <Text style={styles.outcomeTitle}>Didn&apos;t eat it</Text>
+              <Text style={styles.outcomeDescription}>You paused and chose differently</Text>
             </View>
           </TouchableOpacity>
 
@@ -228,8 +228,8 @@ export default function DelayFlowScreen() {
               <Smile size={32} color={colors.warning} />
             </View>
             <View style={styles.outcomeTextContainer}>
-              <Text style={styles.outcomeTitle}>I had a small amount</Text>
-              <Text style={styles.outcomeDescription}>Mindful choice</Text>
+              <Text style={styles.outcomeTitle}>Small amount</Text>
+              <Text style={styles.outcomeDescription}>Mindful and controlled</Text>
             </View>
           </TouchableOpacity>
 
@@ -246,8 +246,8 @@ export default function DelayFlowScreen() {
               <Brain size={32} color={colors.textSecondary} />
             </View>
             <View style={styles.outcomeTextContainer}>
-              <Text style={styles.outcomeTitle}>I ate it — learning moment</Text>
-              <Text style={styles.outcomeDescription}>Data collected, no judgment</Text>
+              <Text style={styles.outcomeTitle}>Ate it — learning moment</Text>
+              <Text style={styles.outcomeDescription}>Progress over perfection</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -285,7 +285,7 @@ export default function DelayFlowScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.suggestionsSubtitle}>
-            These activities can help redirect your focus
+            Tap one to try it, or keep scrolling
           </Text>
           {visibleSuggestions.map((suggestion) => (
             <View key={suggestion.id} style={styles.suggestionCardWrapper}>
@@ -325,7 +325,7 @@ export default function DelayFlowScreen() {
 
         <View style={styles.footer}>
           <TouchableOpacity style={styles.skipButton} onPress={() => setStage('feedback')}>
-            <Text style={styles.skipButtonText}>Skip</Text>
+            <Text style={styles.skipButtonText}>Not now</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -348,7 +348,7 @@ export default function DelayFlowScreen() {
           </View>
 
           <View style={styles.feedbackSection}>
-            <Text style={styles.feedbackQuestion}>How strong is the craving now?</Text>
+            <Text style={styles.feedbackQuestion}>How loud is it now?</Text>
             <View style={styles.intensityButtons}>
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
                 <TouchableOpacity
@@ -394,7 +394,7 @@ export default function DelayFlowScreen() {
               }
             }}
           >
-            <Text style={styles.continueButtonText}>Continue</Text>
+            <Text style={styles.continueButtonText}>Keep going</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
