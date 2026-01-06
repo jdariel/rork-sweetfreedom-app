@@ -79,14 +79,23 @@ export const [AppProvider, useApp] = createContextHook(() => {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.PROFILE);
         if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') return null;
-        const parsed = JSON.parse(stored);
-        if (typeof parsed !== 'object' || parsed === null) {
+        
+        let parsed;
+        try {
+          parsed = JSON.parse(stored);
+        } catch (parseError) {
+          console.error('[Profile] JSON parse error, clearing:', parseError);
+          await AsyncStorage.removeItem(STORAGE_KEYS.PROFILE);
+          return null;
+        }
+        
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
           await AsyncStorage.removeItem(STORAGE_KEYS.PROFILE);
           return null;
         }
         return parsed;
       } catch (error) {
-        console.error('Error parsing profile:', error);
+        console.error('[Profile] Storage error:', error);
         await AsyncStorage.removeItem(STORAGE_KEYS.PROFILE);
         return null;
       }
@@ -100,10 +109,19 @@ export const [AppProvider, useApp] = createContextHook(() => {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.CRAVINGS);
         if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') return [];
-        const parsed = JSON.parse(stored);
+        
+        let parsed;
+        try {
+          parsed = JSON.parse(stored);
+        } catch (parseError) {
+          console.error('[Cravings] JSON parse error, clearing:', parseError);
+          await AsyncStorage.removeItem(STORAGE_KEYS.CRAVINGS);
+          return [];
+        }
+        
         return Array.isArray(parsed) ? parsed : [];
       } catch (error) {
-        console.error('Error parsing cravings:', error);
+        console.error('[Cravings] Storage error:', error);
         await AsyncStorage.removeItem(STORAGE_KEYS.CRAVINGS);
         return [];
       }
@@ -117,10 +135,19 @@ export const [AppProvider, useApp] = createContextHook(() => {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.STREAK);
         if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') return { current: 0, longest: 0, lastCravingDate: null };
-        const parsed = JSON.parse(stored);
+        
+        let parsed;
+        try {
+          parsed = JSON.parse(stored);
+        } catch (parseError) {
+          console.error('[Streak] JSON parse error, clearing:', parseError);
+          await AsyncStorage.removeItem(STORAGE_KEYS.STREAK);
+          return { current: 0, longest: 0, lastCravingDate: null };
+        }
+        
         return parsed;
       } catch (error) {
-        console.error('Error parsing streak:', error);
+        console.error('[Streak] Storage error:', error);
         await AsyncStorage.removeItem(STORAGE_KEYS.STREAK);
         return { current: 0, longest: 0, lastCravingDate: null };
       }
@@ -136,10 +163,19 @@ export const [AppProvider, useApp] = createContextHook(() => {
         if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') {
           return { totalPausesCompleted: 0, momentumState: 'active' as const };
         }
-        const parsed = JSON.parse(stored);
+        
+        let parsed;
+        try {
+          parsed = JSON.parse(stored);
+        } catch (parseError) {
+          console.error('[CalmMomentum] JSON parse error, clearing:', parseError);
+          await AsyncStorage.removeItem(STORAGE_KEYS.CALM_MOMENTUM);
+          return { totalPausesCompleted: 0, momentumState: 'active' as const };
+        }
+        
         return parsed;
       } catch (error) {
-        console.error('Error parsing calm momentum:', error);
+        console.error('[CalmMomentum] Storage error:', error);
         await AsyncStorage.removeItem(STORAGE_KEYS.CALM_MOMENTUM);
         return { totalPausesCompleted: 0, momentumState: 'active' as const };
       }
@@ -153,10 +189,19 @@ export const [AppProvider, useApp] = createContextHook(() => {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.COACH_MESSAGES);
         if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') return [];
-        const parsed = JSON.parse(stored);
+        
+        let parsed;
+        try {
+          parsed = JSON.parse(stored);
+        } catch (parseError) {
+          console.error('[CoachMessages] JSON parse error, clearing:', parseError);
+          await AsyncStorage.removeItem(STORAGE_KEYS.COACH_MESSAGES);
+          return [];
+        }
+        
         return Array.isArray(parsed) ? parsed : [];
       } catch (error) {
-        console.error('Error parsing coach messages:', error);
+        console.error('[CoachMessages] Storage error:', error);
         await AsyncStorage.removeItem(STORAGE_KEYS.COACH_MESSAGES);
         return [];
       }
@@ -170,10 +215,19 @@ export const [AppProvider, useApp] = createContextHook(() => {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.REWARDS);
         if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') return [];
-        const parsed = JSON.parse(stored);
+        
+        let parsed;
+        try {
+          parsed = JSON.parse(stored);
+        } catch (parseError) {
+          console.error('[Rewards] JSON parse error, clearing:', parseError);
+          await AsyncStorage.removeItem(STORAGE_KEYS.REWARDS);
+          return [];
+        }
+        
         return Array.isArray(parsed) ? parsed : [];
       } catch (error) {
-        console.error('Error parsing rewards:', error);
+        console.error('[Rewards] Storage error:', error);
         await AsyncStorage.removeItem(STORAGE_KEYS.REWARDS);
         return [];
       }

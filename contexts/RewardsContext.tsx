@@ -34,17 +34,30 @@ export const [RewardsProvider, useRewards] = createContextHook(() => {
     queryFn: async () => {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') {
+        if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '' || stored === '{}') {
+          console.log('[Rewards] No stored data, using defaults');
           return createDefaultRewardsState();
         }
-        const parsed = JSON.parse(stored);
-        if (typeof parsed !== 'object' || parsed === null) {
+        
+        let parsed;
+        try {
+          parsed = JSON.parse(stored);
+        } catch (parseError) {
+          console.error('[Rewards] JSON parse error:', parseError, 'Data:', stored.substring(0, 100));
           await AsyncStorage.removeItem(STORAGE_KEY);
           return createDefaultRewardsState();
         }
+        
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+          console.log('[Rewards] Invalid data type, using defaults');
+          await AsyncStorage.removeItem(STORAGE_KEY);
+          return createDefaultRewardsState();
+        }
+        
+        console.log('[Rewards] Loaded from storage');
         return parsed;
       } catch (error) {
-        console.error('Error parsing rewards state:', error);
+        console.error('[Rewards] Storage error:', error);
         await AsyncStorage.removeItem(STORAGE_KEY);
         return createDefaultRewardsState();
       }
