@@ -89,11 +89,11 @@ export default function HomeScreen() {
         <Text style={styles.title}>Take a breath.</Text>
         
         <View style={styles.circleContainer}>
-          <CircleButton onPress={handleLongPress} onLongPress={handleTap} />
+          <CircleButton onPress={handleTap} onLongPress={handleLongPress} />
         </View>
 
-        <Text style={styles.subtitle}>Tap for breathing exercise.</Text>
-        <Text style={styles.hint}>Long-press to talk to Less AI.</Text>
+        <Text style={styles.subtitle}>Tap to talk to Less AI.</Text>
+        <Text style={styles.hint}>Long-press for breathing exercise.</Text>
       </View>
 
       <Modal
