@@ -11,7 +11,8 @@ interface CircleButtonProps {
 
 export default function CircleButton({ onPress, onLongPress, size = 280 }: CircleButtonProps) {
   const [reduceMotion, setReduceMotion] = useState(false);
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const breathingScaleAnim = useRef(new Animated.Value(1)).current;
+  const pressScaleAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
@@ -28,12 +29,12 @@ export default function CircleButton({ onPress, onLongPress, size = 280 }: Circl
     const breathingAnimation = Animated.loop(
       Animated.parallel([
         Animated.sequence([
-          Animated.timing(scaleAnim, {
+          Animated.timing(breathingScaleAnim, {
             toValue: 1.05,
             duration: 3000,
             useNativeDriver: true,
           }),
-          Animated.timing(scaleAnim, {
+          Animated.timing(breathingScaleAnim, {
             toValue: 1,
             duration: 3000,
             useNativeDriver: true,
@@ -59,25 +60,23 @@ export default function CircleButton({ onPress, onLongPress, size = 280 }: Circl
     return () => {
       breathingAnimation.stop();
     };
-  }, [scaleAnim, glowAnim, reduceMotion]);
+  }, [breathingScaleAnim, glowAnim, reduceMotion]);
 
   const handlePressIn = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    Animated.spring(scaleAnim, {
+    Animated.spring(pressScaleAnim, {
       toValue: 0.95,
       useNativeDriver: true,
     }).start();
   };
 
   const handlePressOut = () => {
-    if (!reduceMotion) {
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-      }).start();
-    }
+    Animated.spring(pressScaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
   };
 
   const handleLongPressAction = () => {
@@ -91,6 +90,8 @@ export default function CircleButton({ onPress, onLongPress, size = 280 }: Circl
     inputRange: [0.3, 0.5],
     outputRange: [0.3, 0.5],
   });
+
+  const combinedScale = Animated.multiply(breathingScaleAnim, pressScaleAnim);
 
   return (
     <Pressable
@@ -111,7 +112,7 @@ export default function CircleButton({ onPress, onLongPress, size = 280 }: Circl
             height: size + 40,
             borderRadius: (size + 40) / 2,
             opacity: glowOpacity,
-            transform: [{ scale: scaleAnim }],
+            transform: [{ scale: combinedScale }],
           },
         ]}
       />
@@ -122,7 +123,7 @@ export default function CircleButton({ onPress, onLongPress, size = 280 }: Circl
             width: size,
             height: size,
             borderRadius: size / 2,
-            transform: [{ scale: scaleAnim }],
+            transform: [{ scale: combinedScale }],
           },
         ]}
       >
