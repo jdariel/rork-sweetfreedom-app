@@ -196,7 +196,7 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>About CraveLess</Text>
           <View style={styles.aboutCard}>
             <Text style={styles.aboutText}>
-              CraveLess helps you take control of your sugar cravings through mindful tracking, supportive AI coaching, and proven behavior change techniques.
+              CraveLess helps you take control of your sugar cravings through mindful tracking, supportive Less AI coaching, and proven behavior change techniques.
             </Text>
             <Text style={[styles.aboutText, { marginTop: 12 }]}>
               Remember: Progress, not perfection. Every small step counts.
@@ -209,7 +209,7 @@ export default function ProfileScreen() {
           <View style={styles.tipsCard}>
             <Text style={styles.tipItem}>• Log your cravings immediately when they happen</Text>
             <Text style={styles.tipItem}>• Use the delay technique to give yourself time</Text>
-            <Text style={styles.tipItem}>• Chat with your AI coach when you need support</Text>
+            <Text style={styles.tipItem}>• Chat with Less AI when you need support</Text>
             <Text style={styles.tipItem}>• Celebrate small wins and learn from setbacks</Text>
             <Text style={styles.tipItem}>• Track patterns to understand your triggers</Text>
           </View>

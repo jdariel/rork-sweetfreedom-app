@@ -15,7 +15,7 @@ export default function CoachLayout() {
         },
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'AI Coach' }} />
+      <Stack.Screen name="index" options={{ title: 'Less AI' }} />
     </Stack>
   );
 }
