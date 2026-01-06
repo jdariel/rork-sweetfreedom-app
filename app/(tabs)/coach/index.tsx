@@ -42,25 +42,32 @@ export default function CoachScreen() {
         });
 
         if (textParts.length > 0) {
-          const content = textParts.map(p => p.type === 'text' ? p.text : '').join('\n').trim();
+          let content = textParts.map(p => p.type === 'text' ? p.text : '').join('\n').trim();
           if (content) {
-            try {
-              const parsed = JSON.parse(content) as CoachResponse;
-              if (parsed.assistantMessage) {
-                setStreamingContent(parsed.assistantMessage);
-                if (parsed.memoryUpdates?.distressFlag) {
-                  activateDistressMode();
+            content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+            
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              try {
+                const parsed = JSON.parse(jsonMatch[0]) as CoachResponse;
+                if (parsed.assistantMessage) {
+                  setStreamingContent(parsed.assistantMessage);
+                  if (parsed.memoryUpdates?.distressFlag) {
+                    activateDistressMode();
+                  }
+                } else {
+                  console.warn('No assistantMessage in parsed JSON:', parsed);
+                  setStreamingContent('I\'m here to help. Could you tell me more about what you\'re experiencing?');
                 }
-              } else {
-                console.warn('No assistantMessage in parsed JSON:', parsed);
+              } catch (e) {
+                console.error('Failed to parse AI response as JSON:', e, 'Content:', content);
                 setStreamingContent('I\'m here to help. Could you tell me more about what you\'re experiencing?');
               }
-            } catch (e) {
-              console.error('Failed to parse AI response as JSON:', e);
-              if (content.startsWith('{') || content.startsWith('[')) {
-                setStreamingContent('I\'m here to help. Could you tell me more about what you\'re experiencing?');
-              } else {
+            } else {
+              if (!content.startsWith('{') && !content.includes('assistantMessage')) {
                 setStreamingContent(content);
+              } else {
+                setStreamingContent('I\'m here to help. Could you tell me more about what you\'re experiencing?');
               }
             }
           }
