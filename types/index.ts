@@ -43,6 +43,7 @@ export interface UserProfile {
   distressModeActivatedAt?: number;
   favoriteReplacements?: string[];
   hiddenReplacements?: string[];
+  replacementSelectionHistory?: ReplacementSelection[];
   xp: number;
   level: number;
   unlockedFeatures?: string[];
@@ -126,4 +127,19 @@ export interface WeeklyInsight {
   delaySuccessRate: number;
   avgIntensityDrop: number;
   totalMoments: number;
+}
+
+export interface ReplacementSelection {
+  replacementId: string;
+  timestamp: number;
+  cravingId?: string;
+}
+
+export interface ReplacementSuggestion {
+  id: string;
+  title: string;
+  description: string;
+  emoji: string;
+  category: 'fruit' | 'beverage' | 'protein' | 'activity' | 'mindful' | 'healthy-sweet';
+  tags: string[];
 }

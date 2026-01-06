@@ -10,7 +10,7 @@ import * as Haptics from 'expo-haptics';
 
 export default function DelayFlowScreen() {
   const { cravingId } = useLocalSearchParams<{ cravingId: string }>();
-  const { updateCravingFeedback, updateCravingDelayUsed, updateCravingOutcome, updateCravingDelayData, profile, toggleFavoriteReplacement, toggleHiddenReplacement, addXP, triggerReward } = useApp();
+  const { updateCravingFeedback, updateCravingDelayUsed, updateCravingOutcome, updateCravingDelayData, profile, toggleFavoriteReplacement, toggleHiddenReplacement, addXP, triggerReward, recordReplacementSelection, getPersonalizedReplacements } = useApp();
   const [stage, setStage] = useState<'delay' | 'suggestions' | 'feedback' | 'outcome' | 'complete'>('delay');
   const [countdown, setCountdown] = useState<number>(300);
   const [hasAwarded1Min, setHasAwarded1Min] = useState<boolean>(false);
@@ -111,10 +111,13 @@ export default function DelayFlowScreen() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleSuggestionTap = () => {
+  const handleSuggestionTap = (replacementId: string) => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+    
+    recordReplacementSelection(replacementId, cravingId);
+    
     const delayEndTime = Date.now();
     const delayDuration = Math.floor((delayEndTime - delayStartTime.current) / 1000);
     const engagementSec = Math.floor(totalEngagementTime.current / 1000);
@@ -155,19 +158,8 @@ export default function DelayFlowScreen() {
   };
 
   const visibleSuggestions = useMemo(() => {
-    const hidden = profile?.hiddenReplacements || [];
-    const favorites = profile?.favoriteReplacements || [];
-    
-    const filtered = replacementSuggestions.filter(s => !hidden.includes(s.id));
-    
-    return filtered.sort((a, b) => {
-      const aFav = favorites.includes(a.id);
-      const bFav = favorites.includes(b.id);
-      if (aFav && !bFav) return -1;
-      if (!aFav && bFav) return 1;
-      return 0;
-    });
-  }, [profile?.hiddenReplacements, profile?.favoriteReplacements]);
+    return getPersonalizedReplacements(replacementSuggestions, 6);
+  }, [getPersonalizedReplacements]);
 
   const isFavorite = (id: string) => {
     return profile?.favoriteReplacements?.includes(id) || false;
@@ -299,7 +291,7 @@ export default function DelayFlowScreen() {
             <View key={suggestion.id} style={styles.suggestionCardWrapper}>
               <TouchableOpacity
                 style={[styles.suggestionCard, isFavorite(suggestion.id) && styles.suggestionCardFavorite]}
-                onPress={handleSuggestionTap}
+                onPress={() => handleSuggestionTap(suggestion.id)}
               >
                 <View style={styles.suggestionEmojiContainer}>
                   <Text style={styles.suggestionEmoji}>{suggestion.emoji}</Text>

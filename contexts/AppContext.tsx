@@ -2,7 +2,7 @@ import createContextHook from '@nkzw/create-context-hook';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState, useEffect, useMemo } from 'react';
-import { Craving, UserProfile, Streak, GoalMode, CravingOutcome, CoachMessage, XPAction, SurpriseReward } from '@/types';
+import { Craving, UserProfile, Streak, GoalMode, CravingOutcome, CoachMessage, XPAction, SurpriseReward, ReplacementSelection } from '@/types';
 import { getRandomUnlockable, getLevelUnlock } from '@/constants/unlockables';
 
 const STORAGE_KEYS = {
@@ -681,6 +681,107 @@ export const [AppProvider, useApp] = createContextHook(() => {
     return rewards.map(r => r.unlockable);
   };
 
+  const recordReplacementSelection = (replacementId: string, cravingId?: string) => {
+    if (!profile) return;
+
+    const selection: ReplacementSelection = {
+      replacementId,
+      timestamp: Date.now(),
+      cravingId,
+    };
+
+    const history = profile.replacementSelectionHistory || [];
+    const updatedHistory = [...history, selection];
+
+    const newProfile = {
+      ...profile,
+      replacementSelectionHistory: updatedHistory,
+    };
+
+    setProfile(newProfile);
+    saveProfileMutation.mutate(newProfile);
+    console.log('Replacement selection recorded:', replacementId);
+  };
+
+  const getPersonalizedReplacements = (allSuggestions: any[], maxResults: number = 6) => {
+    if (!profile) return allSuggestions.slice(0, maxResults);
+
+    const history = profile.replacementSelectionHistory || [];
+    const favorites = profile.favoriteReplacements || [];
+    const hidden = profile.hiddenReplacements || [];
+
+    const visible = allSuggestions.filter(s => !hidden.includes(s.id));
+
+    if (history.length === 0) {
+      const favItems = visible.filter(s => favorites.includes(s.id));
+      const otherItems = visible.filter(s => !favorites.includes(s.id));
+      const shuffled = [...favItems, ...otherItems.sort(() => Math.random() - 0.5)];
+      return shuffled.slice(0, maxResults);
+    }
+
+    const last30Days = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    const recentSelections = history.filter(h => h.timestamp >= last30Days);
+
+    const selectionCounts: Record<string, number> = {};
+    recentSelections.forEach(s => {
+      selectionCounts[s.replacementId] = (selectionCounts[s.replacementId] || 0) + 1;
+    });
+
+    const selectedIds = new Set(recentSelections.map(s => s.replacementId));
+    const selectedItems = visible.filter(s => selectedIds.has(s.id));
+
+    const categoryCounts: Record<string, number> = {};
+    const tagCounts: Record<string, number> = {};
+
+    selectedItems.forEach(item => {
+      categoryCounts[item.category] = (categoryCounts[item.category] || 0) + 1;
+      item.tags?.forEach((tag: string) => {
+        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+      });
+    });
+
+    const topCategories = Object.entries(categoryCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 2)
+      .map(([cat]) => cat);
+
+    const topTags = Object.entries(tagCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([tag]) => tag);
+
+    const scored = visible.map(item => {
+      let score = 0;
+
+      if (favorites.includes(item.id)) score += 100;
+
+      const timesSelected = selectionCounts[item.id] || 0;
+      score += timesSelected * 10;
+
+      if (topCategories.includes(item.category)) score += 20;
+
+      const matchingTags = item.tags?.filter((tag: string) => topTags.includes(tag)).length || 0;
+      score += matchingTags * 15;
+
+      const daysSinceLastSelection = recentSelections
+        .filter(s => s.replacementId === item.id)
+        .map(s => (Date.now() - s.timestamp) / (1000 * 60 * 60 * 24))
+        .sort((a, b) => a - b)[0];
+
+      if (daysSinceLastSelection !== undefined && daysSinceLastSelection < 7) {
+        score -= (7 - daysSinceLastSelection) * 5;
+      }
+
+      score += Math.random() * 10;
+
+      return { item, score };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+
+    return scored.slice(0, maxResults).map(s => s.item);
+  };
+
   return {
     profile,
     cravings,
@@ -714,6 +815,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
     triggerReward,
     dismissReward,
     getUnlockedItems,
+    recordReplacementSelection,
+    getPersonalizedReplacements,
     isLoading: profileQuery.isLoading || cravingsQuery.isLoading || streakQuery.isLoading || coachMessagesQuery.isLoading || rewardsQuery.isLoading,
   };
 });
