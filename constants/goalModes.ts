@@ -51,10 +51,10 @@ export const sweetTypes = [
 ] as const;
 
 export const replacementSuggestions = [
-  { title: 'Fresh Berries', description: 'Natural sweetness with fiber', emoji: '🫐' },
-  { title: 'Herbal Tea', description: 'Calming & naturally sweet', emoji: '🍵' },
-  { title: 'Dark Chocolate', description: 'Small piece (70%+ cacao)', emoji: '🍫' },
-  { title: 'Apple Slices', description: 'With almond butter', emoji: '🍎' },
-  { title: 'Greek Yogurt', description: 'With cinnamon', emoji: '🥣' },
-  { title: 'Sparkling Water', description: 'With lemon or lime', emoji: '💧' },
+  { id: 'berries', title: 'Fresh Berries', description: 'Natural sweetness with fiber', emoji: '🫐' },
+  { id: 'tea', title: 'Herbal Tea', description: 'Calming & naturally sweet', emoji: '🍵' },
+  { id: 'dark-choc', title: 'Dark Chocolate', description: 'Small piece (70%+ cacao)', emoji: '🍫' },
+  { id: 'apple', title: 'Apple Slices', description: 'With almond butter', emoji: '🍎' },
+  { id: 'yogurt', title: 'Greek Yogurt', description: 'With cinnamon', emoji: '🥣' },
+  { id: 'water', title: 'Sparkling Water', description: 'With lemon or lime', emoji: '💧' },
 ];

@@ -25,6 +25,8 @@ export interface UserProfile {
   hasCompletedOnboarding: boolean;
   isInDistressMode?: boolean;
   distressModeActivatedAt?: number;
+  favoriteReplacements?: string[];
+  hiddenReplacements?: string[];
 }
 
 export interface Streak {

@@ -1,15 +1,15 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '@/constants/colors';
 import { replacementSuggestions } from '@/constants/goalModes';
-import { Clock, CheckCircle, X, MessageCircle, ThumbsUp, Smile, Brain } from 'lucide-react-native';
+import { Clock, CheckCircle, X, MessageCircle, ThumbsUp, Smile, Brain, Star, EyeOff } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
 
 export default function DelayFlowScreen() {
   const { cravingId } = useLocalSearchParams<{ cravingId: string }>();
-  const { updateCravingFeedback, updateCravingDelayUsed, updateCravingOutcome } = useApp();
+  const { updateCravingFeedback, updateCravingDelayUsed, updateCravingOutcome, profile, toggleFavoriteReplacement, toggleHiddenReplacement } = useApp();
   const [stage, setStage] = useState<'delay' | 'suggestions' | 'feedback' | 'outcome' | 'complete'>('delay');
   const [countdown, setCountdown] = useState<number>(300);
   const [pulseAnim] = useState(new Animated.Value(1));
@@ -55,6 +55,25 @@ export default function DelayFlowScreen() {
       updateCravingDelayUsed(cravingId);
     }
     setStage('feedback');
+  };
+
+  const visibleSuggestions = useMemo(() => {
+    const hidden = profile?.hiddenReplacements || [];
+    const favorites = profile?.favoriteReplacements || [];
+    
+    const filtered = replacementSuggestions.filter(s => !hidden.includes(s.id));
+    
+    return filtered.sort((a, b) => {
+      const aFav = favorites.includes(a.id);
+      const bFav = favorites.includes(b.id);
+      if (aFav && !bFav) return -1;
+      if (!aFav && bFav) return 1;
+      return 0;
+    });
+  }, [profile?.hiddenReplacements, profile?.favoriteReplacements]);
+
+  const isFavorite = (id: string) => {
+    return profile?.favoriteReplacements?.includes(id) || false;
   };
 
   const handleFeedbackSubmit = () => {
@@ -154,18 +173,37 @@ export default function DelayFlowScreen() {
         </View>
 
         <View style={styles.suggestionsContainer}>
-          {replacementSuggestions.map((suggestion, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.suggestionCard}
-              onPress={handleSuggestionTap}
-            >
-              <Text style={styles.suggestionEmoji}>{suggestion.emoji}</Text>
-              <View style={styles.suggestionText}>
-                <Text style={styles.suggestionTitle}>{suggestion.title}</Text>
-                <Text style={styles.suggestionDescription}>{suggestion.description}</Text>
+          {visibleSuggestions.map((suggestion) => (
+            <View key={suggestion.id} style={styles.suggestionCardWrapper}>
+              <TouchableOpacity
+                style={[styles.suggestionCard, isFavorite(suggestion.id) && styles.suggestionCardFavorite]}
+                onPress={handleSuggestionTap}
+              >
+                <Text style={styles.suggestionEmoji}>{suggestion.emoji}</Text>
+                <View style={styles.suggestionText}>
+                  <Text style={styles.suggestionTitle}>{suggestion.title}</Text>
+                  <Text style={styles.suggestionDescription}>{suggestion.description}</Text>
+                </View>
+              </TouchableOpacity>
+              <View style={styles.suggestionActions}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => toggleFavoriteReplacement(suggestion.id)}
+                >
+                  <Star
+                    size={20}
+                    color={isFavorite(suggestion.id) ? colors.warning : colors.textLight}
+                    fill={isFavorite(suggestion.id) ? colors.warning : 'transparent'}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => toggleHiddenReplacement(suggestion.id)}
+                >
+                  <EyeOff size={20} color={colors.textLight} />
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
+            </View>
           ))}
         </View>
 
@@ -363,13 +401,21 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
+  suggestionCardWrapper: {
+    marginBottom: 12,
+  },
   suggestionCard: {
     flexDirection: 'row',
     backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.border,
+  },
+  suggestionCardFavorite: {
+    borderColor: colors.warning,
+    backgroundColor: colors.calm.tealLight,
   },
   suggestionEmoji: {
     fontSize: 40,
@@ -387,6 +433,22 @@ const styles = StyleSheet.create({
   suggestionDescription: {
     fontSize: 14,
     color: colors.textSecondary,
+  },
+  suggestionActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+    gap: 8,
+  },
+  actionButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   completeContainer: {
     flex: 1,

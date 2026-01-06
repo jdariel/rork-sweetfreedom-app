@@ -291,6 +291,36 @@ export const [AppProvider, useApp] = createContextHook(() => {
     saveProfileMutation.mutate(newProfile);
   };
 
+  const toggleFavoriteReplacement = (replacementId: string) => {
+    if (!profile) return;
+    const favorites = profile.favoriteReplacements || [];
+    const isFavorite = favorites.includes(replacementId);
+    const newFavorites = isFavorite
+      ? favorites.filter(id => id !== replacementId)
+      : [...favorites, replacementId];
+    const newProfile = {
+      ...profile,
+      favoriteReplacements: newFavorites,
+    };
+    setProfile(newProfile);
+    saveProfileMutation.mutate(newProfile);
+  };
+
+  const toggleHiddenReplacement = (replacementId: string) => {
+    if (!profile) return;
+    const hidden = profile.hiddenReplacements || [];
+    const isHidden = hidden.includes(replacementId);
+    const newHidden = isHidden
+      ? hidden.filter(id => id !== replacementId)
+      : [...hidden, replacementId];
+    const newProfile = {
+      ...profile,
+      hiddenReplacements: newHidden,
+    };
+    setProfile(newProfile);
+    saveProfileMutation.mutate(newProfile);
+  };
+
   const shouldShowStreaks = useMemo(() => {
     if (profile?.isInDistressMode) return false;
     if (streak.isPaused) return false;
@@ -356,6 +386,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
     deactivateDistressMode,
     pauseStreak,
     resumeStreak,
+    toggleFavoriteReplacement,
+    toggleHiddenReplacement,
     isLoading: profileQuery.isLoading || cravingsQuery.isLoading || streakQuery.isLoading || coachMessagesQuery.isLoading,
   };
 });
