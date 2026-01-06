@@ -25,7 +25,7 @@ export interface Craving {
   stabilizerEngagementSec?: number;
 }
 
-export type UnlockableType = 'stabilizer-style' | 'theme' | 'coach-tone' | 'reflection-card' | 'insight-type';
+export type UnlockableType = 'stabilizer-style' | 'theme' | 'coach-phrase-pack' | 'deck-skin' | 'badge';
 
 export interface Unlockable {
   id: string;

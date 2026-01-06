@@ -3,7 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState, useEffect, useMemo } from 'react';
 import { Craving, UserProfile, Streak, GoalMode, CravingOutcome, CoachMessage, XPAction, SurpriseReward } from '@/types';
-import { getRandomUnlockable } from '@/constants/unlockables';
+import { getRandomUnlockable, getLevelUnlock } from '@/constants/unlockables';
 
 const STORAGE_KEYS = {
   PROFILE: '@craveless_profile',
@@ -552,12 +552,22 @@ export const [AppProvider, useApp] = createContextHook(() => {
     const newLevel = calculateLevel(newXP);
     const oldLevel = profile.level;
     
-    const newUnlocks: string[] = [];
+    const levelRewards: SurpriseReward[] = [];
     if (newLevel > oldLevel) {
-      if (newLevel >= 2) newUnlocks.push('warm-tone');
-      if (newLevel >= 4) newUnlocks.push('night-insights');
-      if (newLevel >= 6) newUnlocks.push('playful-tone');
-      if (newLevel >= 8) newUnlocks.push('emotion-patterns');
+      for (let level = oldLevel + 1; level <= newLevel; level++) {
+        const levelUnlock = getLevelUnlock(level);
+        if (levelUnlock) {
+          const alreadyUnlocked = rewards.some(r => r.unlockable.id === levelUnlock.id);
+          if (!alreadyUnlocked) {
+            const levelReward: SurpriseReward = {
+              id: `level-${level}-${Date.now()}`,
+              unlockable: levelUnlock,
+              timestamp: now,
+            };
+            levelRewards.push(levelReward);
+          }
+        }
+      }
     }
 
     const reduceCelebratory = profile.isInDistressMode;
@@ -566,15 +576,24 @@ export const [AppProvider, useApp] = createContextHook(() => {
       ...profile,
       xp: newXP,
       level: newLevel,
-      unlockedFeatures: [...(profile.unlockedFeatures || []), ...newUnlocks],
       xpActions: [...xpActions, newAction],
       lastActiveDate: now,
     };
     setProfile(newProfile);
     saveProfileMutation.mutate(newProfile);
 
+    if (levelRewards.length > 0) {
+      const updatedRewards = [...rewards, ...levelRewards];
+      setRewards(updatedRewards);
+      saveRewardsMutation.mutate(updatedRewards);
+      setPendingReward(levelRewards[0]);
+    }
+
     console.log(`XP awarded: +${xpGain} for ${actionType}`);
-    return { xpGain, newLevel, leveledUp: newLevel > oldLevel, newUnlocks, reduceCelebratory };
+    if (levelRewards.length > 0) {
+      console.log(`Level unlocks:`, levelRewards.map(r => r.unlockable.name));
+    }
+    return { xpGain, newLevel, leveledUp: newLevel > oldLevel, newUnlocks: levelRewards, reduceCelebratory };
   };
 
   const changeCoachTone = (tone: 'warm' | 'neutral' | 'playful') => {
