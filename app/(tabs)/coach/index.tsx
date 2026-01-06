@@ -44,12 +44,24 @@ export default function CoachScreen() {
         if (textParts.length > 0) {
           let content = textParts.map(p => p.type === 'text' ? p.text : '').join('\n').trim();
           if (content) {
-            content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+            content = content
+              .replace(/```json/g, '')
+              .replace(/```/g, '')
+              .replace(/^`+|`+$/g, '')
+              .trim();
             
             const jsonMatch = content.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
               try {
-                const parsed = JSON.parse(jsonMatch[0]) as CoachResponse;
+                let jsonStr = jsonMatch[0];
+                
+                const firstBrace = jsonStr.indexOf('{');
+                const lastBrace = jsonStr.lastIndexOf('}');
+                if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                  jsonStr = jsonStr.substring(firstBrace, lastBrace + 1);
+                }
+                
+                const parsed = JSON.parse(jsonStr) as CoachResponse;
                 if (parsed.assistantMessage) {
                   setStreamingContent(parsed.assistantMessage);
                   if (parsed.memoryUpdates?.distressFlag) {
@@ -60,13 +72,20 @@ export default function CoachScreen() {
                   setStreamingContent('I\'m here to help. Could you tell me more about what you\'re experiencing?');
                 }
               } catch (e) {
-                console.error('Failed to parse AI response as JSON:', e, 'Content:', content);
-                setStreamingContent('I\'m here to help. Could you tell me more about what you\'re experiencing?');
+                console.error('Failed to parse AI response as JSON:', e);
+                console.error('Attempted to parse:', jsonMatch[0].substring(0, 200));
+                
+                if (content.length > 0 && !content.includes('{') && !content.includes('assistantMessage')) {
+                  setStreamingContent(content);
+                } else {
+                  setStreamingContent('I\'m here to help. Could you tell me more about what you\'re experiencing?');
+                }
               }
             } else {
-              if (!content.startsWith('{') && !content.includes('assistantMessage')) {
+              if (!content.includes('{') && !content.includes('assistantMessage') && content.length > 10) {
                 setStreamingContent(content);
               } else {
+                console.warn('No JSON match found in content:', content.substring(0, 100));
                 setStreamingContent('I\'m here to help. Could you tell me more about what you\'re experiencing?');
               }
             }
