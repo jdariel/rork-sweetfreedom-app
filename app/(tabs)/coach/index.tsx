@@ -51,9 +51,17 @@ export default function CoachScreen() {
                 if (parsed.memoryUpdates?.distressFlag) {
                   activateDistressMode();
                 }
+              } else {
+                console.warn('No assistantMessage in parsed JSON:', parsed);
+                setStreamingContent('I\'m here to help. Could you tell me more about what you\'re experiencing?');
               }
-            } catch {
-              setStreamingContent(content);
+            } catch (e) {
+              console.error('Failed to parse AI response as JSON:', e);
+              if (content.startsWith('{') || content.startsWith('[')) {
+                setStreamingContent('I\'m here to help. Could you tell me more about what you\'re experiencing?');
+              } else {
+                setStreamingContent(content);
+              }
             }
           }
         }
