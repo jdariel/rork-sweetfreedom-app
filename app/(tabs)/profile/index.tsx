@@ -5,7 +5,7 @@ import { goalModeData } from '@/constants/goalModes';
 import colors from '@/constants/colors';
 import { User, Target, Calendar, Award, AlertCircle, ExternalLink, Download, Trash2, MessageSquareOff, Gift, Bug } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { loadUserInsightProfile, buildRecentStats, buildLessContextSnapshot } from '@/utils/lessAiMemory';
+import { loadUserInsightProfile, buildRecentStats, buildLessContextSnapshot, topK } from '@/utils/lessAiMemory';
 import { UserInsightProfile } from '@/types';
 
 export default function ProfileScreen() {
@@ -105,6 +105,9 @@ export default function ProfileScreen() {
       ]
     );
   };
+
+  const topTriggers = insightProfile?.triggerStats ? topK(insightProfile.triggerStats, 5) : [];
+  const topTimeBuckets = insightProfile?.timeBucketStats ? topK(insightProfile.timeBucketStats, 3) : [];
 
   return (
     <View style={styles.container}>
@@ -214,31 +217,74 @@ export default function ProfileScreen() {
               </Text>
             </TouchableOpacity>
             
-            {showDebug && (
+            {showDebug && insightProfile && (
               <View style={styles.debugCard}>
-                <Text style={styles.debugSectionTitle}>UserInsightProfile</Text>
-                <View style={styles.debugContent}>
-                  <Text style={styles.debugText}>
-                    {JSON.stringify(insightProfile, null, 2)}
-                  </Text>
+                <View style={styles.debugSection}>
+                  <Text style={styles.debugSectionTitle}>Trigger Stats (Top 5)</Text>
+                  {topTriggers.length > 0 ? (
+                    topTriggers.map(([trigger, count]) => (
+                      <Text key={trigger} style={styles.debugText}>
+                        • {trigger}: {count}
+                      </Text>
+                    ))
+                  ) : (
+                    <Text style={styles.debugTextEmpty}>No triggers recorded yet</Text>
+                  )}
+                </View>
+
+                <View style={styles.debugSection}>
+                  <Text style={styles.debugSectionTitle}>Time Bucket Stats (Top 3)</Text>
+                  {topTimeBuckets.length > 0 ? (
+                    topTimeBuckets.map(([time, count]) => (
+                      <Text key={time} style={styles.debugText}>
+                        • {time}: {count}
+                      </Text>
+                    ))
+                  ) : (
+                    <Text style={styles.debugTextEmpty}>No time data recorded yet</Text>
+                  )}
+                </View>
+
+                <View style={styles.debugSection}>
+                  <Text style={styles.debugSectionTitle}>Pattern Confidence</Text>
+                  {insightProfile.patternConfidence?.primaryTrigger ? (
+                    <>
+                      <Text style={styles.debugText}>
+                        • Primary Trigger: {insightProfile.patternConfidence.primaryTrigger}
+                      </Text>
+                      <Text style={styles.debugText}>
+                        • Trigger Confidence: {insightProfile.patternConfidence.triggerConfidence?.toFixed(2) || 'N/A'}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={styles.debugTextEmpty}>Not enough data for trigger confidence (need 3+ occurrences)</Text>
+                  )}
+                  {insightProfile.patternConfidence?.peakTime ? (
+                    <>
+                      <Text style={styles.debugText}>
+                        • Peak Time: {insightProfile.patternConfidence.peakTime}
+                      </Text>
+                      <Text style={styles.debugText}>
+                        • Time Confidence: {insightProfile.patternConfidence.timeConfidence?.toFixed(2) || 'N/A'}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text style={styles.debugTextEmpty}>Not enough data for time confidence (need 3+ occurrences)</Text>
+                  )}
+                </View>
+
+                <View style={styles.debugSection}>
+                  <Text style={styles.debugSectionTitle}>Last Context Snapshot</Text>
+                  <ScrollView style={styles.debugSnapshotScroll} nestedScrollEnabled>
+                    <Text style={styles.debugTextMono}>{contextSnapshot || 'No snapshot yet'}</Text>
+                  </ScrollView>
                 </View>
                 
-                <Text style={styles.debugSectionTitle}>Last Context Snapshot</Text>
-                <View style={styles.debugContent}>
-                  <Text style={styles.debugText}>{contextSnapshot}</Text>
-                </View>
-                
-                <Text style={styles.debugSectionTitle}>Stats</Text>
-                <View style={styles.debugContent}>
-                  <Text style={styles.debugText}>
-                    • Total cravings: {cravings.length}
-                  </Text>
-                  <Text style={styles.debugText}>
-                    • Coach messages: {coachMessages.length}
-                  </Text>
-                  <Text style={styles.debugText}>
-                    • Distress mode: {profile.isInDistressMode ? 'Active' : 'Inactive'}
-                  </Text>
+                <View style={styles.debugSection}>
+                  <Text style={styles.debugSectionTitle}>Quick Stats</Text>
+                  <Text style={styles.debugText}>• Total cravings: {cravings.length}</Text>
+                  <Text style={styles.debugText}>• Coach messages: {coachMessages.length}</Text>
+                  <Text style={styles.debugText}>• Distress mode: {profile.isInDistressMode ? 'Active' : 'Inactive'}</Text>
                 </View>
               </View>
             )}
@@ -612,12 +658,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  debugSection: {
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
   debugSectionTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700' as const,
-    color: colors.text,
-    marginTop: 12,
+    color: colors.primary,
     marginBottom: 8,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
   },
   debugContent: {
     backgroundColor: colors.background,
@@ -625,9 +678,26 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   debugText: {
-    fontSize: 12,
+    fontSize: 13,
+    color: colors.text,
+    lineHeight: 20,
+    marginBottom: 3,
+  },
+  debugTextEmpty: {
+    fontSize: 13,
+    color: colors.textLight,
+    fontStyle: 'italic' as const,
+  },
+  debugTextMono: {
+    fontSize: 11,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    color: colors.textSecondary,
-    lineHeight: 18,
+    color: colors.text,
+    lineHeight: 16,
+  },
+  debugSnapshotScroll: {
+    maxHeight: 150,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    padding: 12,
   },
 });

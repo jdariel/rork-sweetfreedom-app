@@ -4,7 +4,7 @@ import colors from '@/constants/colors';
 import { Send, Sparkles, Heart, CheckCircle2, MessageCircle, Play, Heart as HeartIcon, Sliders, ListChecks, Lightbulb, CalendarDays } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
 import { getLessAiReplyWithRetry } from '@/utils/lessAi';
-import { loadUserInsightProfile, saveUserInsightProfile, loadAiTurns, addAiTurn, buildRecentStats, applyMemoryUpdates } from '@/utils/lessAiMemory';
+import { loadUserInsightProfile, saveUserInsightProfile, loadAiTurns, addAiTurn, buildRecentStats, applyMemoryUpdates, inferSignalsFromUserText, incrementStat } from '@/utils/lessAiMemory';
 import { useRouter } from 'expo-router';
 import { UserInsightProfile } from '@/types';
 
@@ -44,14 +44,59 @@ export default function CoachScreen() {
     setIsLoading(true);
     
     try {
+      const inferred = inferSignalsFromUserText(userMessage);
+      console.log('[Coach] Inferred signals:', inferred);
+      
+      let updatedProfile = { ...insightProfile };
+      
+      if (!profile?.isInDistressMode) {
+        if (inferred.inferredTimeBucket) {
+          const timeStats = updatedProfile.timeBucketStats || {};
+          updatedProfile.timeBucketStats = incrementStat(timeStats, inferred.inferredTimeBucket, 1);
+        }
+        
+        inferred.inferredTriggers.forEach(trigger => {
+          const triggerStats = updatedProfile.triggerStats || {};
+          updatedProfile.triggerStats = incrementStat(triggerStats, trigger, 1);
+        });
+        
+        inferred.inferredEmotions.forEach(emotion => {
+          const emotionStats = updatedProfile.emotionStats || {};
+          updatedProfile.emotionStats = incrementStat(emotionStats, emotion, 1);
+        });
+        
+        inferred.inferredSweetPrefs.forEach(sweet => {
+          const sweetStats = updatedProfile.sweetPreferenceStats || {};
+          updatedProfile.sweetPreferenceStats = incrementStat(sweetStats, sweet, 1);
+        });
+        
+        await saveUserInsightProfile(updatedProfile);
+        setInsightProfile(updatedProfile);
+      }
+      
       const recentTurns = await loadAiTurns();
       const stats = buildRecentStats(cravings);
       
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const recentCravings = cravings.filter(c => c.timestamp >= sevenDaysAgo);
+      const avgIntensity = recentCravings.length > 0
+        ? recentCravings.reduce((sum, c) => sum + c.intensity, 0) / recentCravings.length
+        : 0;
+      
+      const currentMoment = inferred.inferredTimeBucket || inferred.inferredEmotions.length > 0
+        ? {
+            timeBucket: inferred.inferredTimeBucket,
+            emotion: inferred.inferredEmotions[0],
+            avgIntensity,
+          }
+        : undefined;
+      
       const result = await getLessAiReplyWithRetry({
         userMessage,
-        profile: insightProfile,
+        profile: updatedProfile,
         recentTurns,
         stats,
+        currentMoment,
         distressMode: profile?.isInDistressMode,
       });
       
@@ -60,9 +105,9 @@ export default function CoachScreen() {
       
       setLastQuickActions(result.quickActions);
       
-      const updatedProfile = applyMemoryUpdates(insightProfile, result.memoryUpdates);
-      await saveUserInsightProfile(updatedProfile);
-      setInsightProfile(updatedProfile);
+      const finalProfile = applyMemoryUpdates(updatedProfile, result.memoryUpdates);
+      await saveUserInsightProfile(finalProfile);
+      setInsightProfile(finalProfile);
       
       if (result.memoryUpdates.distressFlag && !profile?.isInDistressMode) {
         activateDistressMode();
@@ -193,14 +238,59 @@ export default function CoachScreen() {
                   setIsLoading(true);
                   
                   try {
+                    const inferred = inferSignalsFromUserText(prompt);
+                    console.log('[Coach] Inferred signals:', inferred);
+                    
+                    let updatedProfile = { ...insightProfile };
+                    
+                    if (!profile?.isInDistressMode) {
+                      if (inferred.inferredTimeBucket) {
+                        const timeStats = updatedProfile.timeBucketStats || {};
+                        updatedProfile.timeBucketStats = incrementStat(timeStats, inferred.inferredTimeBucket, 1);
+                      }
+                      
+                      inferred.inferredTriggers.forEach(trigger => {
+                        const triggerStats = updatedProfile.triggerStats || {};
+                        updatedProfile.triggerStats = incrementStat(triggerStats, trigger, 1);
+                      });
+                      
+                      inferred.inferredEmotions.forEach(emotion => {
+                        const emotionStats = updatedProfile.emotionStats || {};
+                        updatedProfile.emotionStats = incrementStat(emotionStats, emotion, 1);
+                      });
+                      
+                      inferred.inferredSweetPrefs.forEach(sweet => {
+                        const sweetStats = updatedProfile.sweetPreferenceStats || {};
+                        updatedProfile.sweetPreferenceStats = incrementStat(sweetStats, sweet, 1);
+                      });
+                      
+                      await saveUserInsightProfile(updatedProfile);
+                      setInsightProfile(updatedProfile);
+                    }
+                    
                     const recentTurns = await loadAiTurns();
                     const stats = buildRecentStats(cravings);
                     
+                    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+                    const recentCravings = cravings.filter(c => c.timestamp >= sevenDaysAgo);
+                    const avgIntensity = recentCravings.length > 0
+                      ? recentCravings.reduce((sum, c) => sum + c.intensity, 0) / recentCravings.length
+                      : 0;
+                    
+                    const currentMoment = inferred.inferredTimeBucket || inferred.inferredEmotions.length > 0
+                      ? {
+                          timeBucket: inferred.inferredTimeBucket,
+                          emotion: inferred.inferredEmotions[0],
+                          avgIntensity,
+                        }
+                      : undefined;
+                    
                     const result = await getLessAiReplyWithRetry({
                       userMessage: prompt,
-                      profile: insightProfile,
+                      profile: updatedProfile,
                       recentTurns,
                       stats,
+                      currentMoment,
                       distressMode: profile?.isInDistressMode,
                     });
                     
@@ -208,9 +298,9 @@ export default function CoachScreen() {
                     await addAiTurn('assistant', result.assistantMessage);
                     setLastQuickActions(result.quickActions);
                     
-                    const updatedProfile = applyMemoryUpdates(insightProfile, result.memoryUpdates);
-                    await saveUserInsightProfile(updatedProfile);
-                    setInsightProfile(updatedProfile);
+                    const finalProfile = applyMemoryUpdates(updatedProfile, result.memoryUpdates);
+                    await saveUserInsightProfile(finalProfile);
+                    setInsightProfile(finalProfile);
                     
                     if (result.memoryUpdates.distressFlag) {
                       activateDistressMode();

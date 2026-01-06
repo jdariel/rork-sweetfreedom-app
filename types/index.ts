@@ -155,6 +155,16 @@ export interface UserInsightProfile {
   averageIntensityDrop7d?: number;
   distressFlag?: boolean;
   lastUpdatedISO?: string;
+  triggerStats?: Record<string, number>;
+  emotionStats?: Record<string, number>;
+  sweetPreferenceStats?: Record<string, number>;
+  timeBucketStats?: Record<string, number>;
+  patternConfidence?: {
+    primaryTrigger?: string;
+    triggerConfidence?: number;
+    peakTime?: string;
+    timeConfidence?: number;
+  };
 }
 
 export interface AiTurn {
