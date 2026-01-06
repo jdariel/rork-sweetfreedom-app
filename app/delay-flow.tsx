@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, TextInput, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, TextInput, Pressable, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '@/constants/colors';
 import { replacementSuggestions } from '@/constants/goalModes';
@@ -274,15 +274,24 @@ export default function DelayFlowScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.suggestionsContainer}>
+        <ScrollView 
+          style={styles.suggestionsScrollView}
+          contentContainerStyle={styles.suggestionsContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.suggestionsSubtitle}>
+            These activities can help redirect your focus
+          </Text>
           {visibleSuggestions.map((suggestion) => (
             <View key={suggestion.id} style={styles.suggestionCardWrapper}>
               <TouchableOpacity
                 style={[styles.suggestionCard, isFavorite(suggestion.id) && styles.suggestionCardFavorite]}
                 onPress={handleSuggestionTap}
               >
-                <Text style={styles.suggestionEmoji}>{suggestion.emoji}</Text>
-                <View style={styles.suggestionText}>
+                <View style={styles.suggestionEmojiContainer}>
+                  <Text style={styles.suggestionEmoji}>{suggestion.emoji}</Text>
+                </View>
+                <View style={styles.suggestionTextContainer}>
                   <Text style={styles.suggestionTitle}>{suggestion.title}</Text>
                   <Text style={styles.suggestionDescription}>{suggestion.description}</Text>
                 </View>
@@ -307,7 +316,7 @@ export default function DelayFlowScreen() {
               </View>
             </View>
           ))}
-        </View>
+        </ScrollView>
 
         <View style={styles.footer}>
           <TouchableOpacity style={styles.skipButton} onPress={() => setStage('feedback')}>
@@ -556,19 +565,28 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     marginBottom: 48,
   },
-  suggestionsContainer: {
+  suggestionsScrollView: {
     flex: 1,
+  },
+  suggestionsContainer: {
     padding: 20,
+    paddingBottom: 40,
+  },
+  suggestionsSubtitle: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    marginBottom: 20,
+    lineHeight: 22,
   },
   suggestionCardWrapper: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   suggestionCard: {
     flexDirection: 'row',
     backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
-    alignItems: 'center',
+    alignItems: 'flex-start',
     borderWidth: 2,
     borderColor: colors.border,
   },
@@ -576,22 +594,33 @@ const styles = StyleSheet.create({
     borderColor: colors.warning,
     backgroundColor: colors.calm.tealLight,
   },
-  suggestionEmoji: {
-    fontSize: 40,
-    marginRight: 16,
+  suggestionEmojiContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
-  suggestionText: {
+  suggestionEmoji: {
+    fontSize: 32,
+  },
+  suggestionTextContainer: {
     flex: 1,
+    paddingTop: 4,
   },
   suggestionTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700' as const,
     color: colors.text,
-    marginBottom: 4,
+    marginBottom: 6,
+    lineHeight: 22,
   },
   suggestionDescription: {
     fontSize: 14,
     color: colors.textSecondary,
+    lineHeight: 20,
   },
   suggestionActions: {
     flexDirection: 'row',
