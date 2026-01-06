@@ -34,13 +34,19 @@ export const [RewardsProvider, useRewards] = createContextHook(() => {
     queryFn: async () => {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '' || stored === '{}') {
+        if (!stored) {
           console.log('[Rewards] No stored data, using defaults');
+          return createDefaultRewardsState();
+        }
+
+        if (stored === 'undefined' || stored === 'null' || stored.trim() === '' || stored === '{}' || stored === '[]') {
+          console.log('[Rewards] Empty/invalid stored data, using defaults');
+          await AsyncStorage.removeItem(STORAGE_KEY);
           return createDefaultRewardsState();
         }
         
         if (!stored.startsWith('{')) {
-          console.error('[Rewards] Invalid JSON format, clearing');
+          console.error('[Rewards] Invalid JSON format (starts with:', stored.substring(0, 20), '), clearing');
           await AsyncStorage.removeItem(STORAGE_KEY);
           return createDefaultRewardsState();
         }
@@ -48,13 +54,13 @@ export const [RewardsProvider, useRewards] = createContextHook(() => {
         let parsed;
         try {
           parsed = JSON.parse(stored);
-        } catch {
-          console.error('[Rewards] JSON parse error, clearing');
+        } catch (parseError) {
+          console.error('[Rewards] JSON parse error:', parseError, 'Data:', stored.substring(0, 50));
           await AsyncStorage.removeItem(STORAGE_KEY);
           return createDefaultRewardsState();
         }
         
-        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
           console.log('[Rewards] Invalid data type, using defaults');
           await AsyncStorage.removeItem(STORAGE_KEY);
           return createDefaultRewardsState();
@@ -62,8 +68,8 @@ export const [RewardsProvider, useRewards] = createContextHook(() => {
         
         console.log('[Rewards] Loaded from storage');
         return parsed;
-      } catch {
-        console.error('[Rewards] Storage error');
+      } catch (error) {
+        console.error('[Rewards] Storage error:', error);
         try {
           await AsyncStorage.removeItem(STORAGE_KEY);
         } catch {}

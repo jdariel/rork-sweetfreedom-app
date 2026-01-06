@@ -20,12 +20,19 @@ export async function cleanupCorruptStorage(): Promise<void> {
     try {
       const stored = await AsyncStorage.getItem(key);
       
-      if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') {
+      if (!stored) {
+        continue;
+      }
+
+      if (stored === 'undefined' || stored === 'null' || stored.trim() === '' || stored === '{}' || stored === '[]') {
+        console.warn(`[Storage Cleanup] Empty/invalid value for ${key}, removing`);
+        await AsyncStorage.removeItem(key);
+        cleanedCount++;
         continue;
       }
 
       if (!stored.startsWith('{') && !stored.startsWith('[')) {
-        console.warn(`[Storage Cleanup] Invalid format for ${key}, removing`);
+        console.warn(`[Storage Cleanup] Non-JSON format for ${key} (starts with: ${stored.substring(0, 20)}), removing`);
         await AsyncStorage.removeItem(key);
         cleanedCount++;
         continue;
@@ -33,6 +40,13 @@ export async function cleanupCorruptStorage(): Promise<void> {
 
       try {
         const parsed = JSON.parse(stored);
+        
+        if (parsed === null || parsed === undefined) {
+          console.warn(`[Storage Cleanup] Null/undefined parsed value for ${key}, removing`);
+          await AsyncStorage.removeItem(key);
+          cleanedCount++;
+          continue;
+        }
         
         if (key.includes('profile') && Array.isArray(parsed)) {
           console.warn(`[Storage Cleanup] Profile is array, removing ${key}`);
@@ -45,13 +59,17 @@ export async function cleanupCorruptStorage(): Promise<void> {
             cleanedCount++;
           }
         }
-      } catch {
-        console.warn(`[Storage Cleanup] Parse error for ${key}, removing`);
+      } catch (parseError) {
+        console.warn(`[Storage Cleanup] Parse error for ${key}:`, parseError, 'Data preview:', stored.substring(0, 50));
         await AsyncStorage.removeItem(key);
         cleanedCount++;
       }
     } catch (error) {
       console.error(`[Storage Cleanup] Error checking ${key}:`, error);
+      try {
+        await AsyncStorage.removeItem(key);
+        cleanedCount++;
+      } catch {}
     }
   }
 
