@@ -50,16 +50,16 @@ export default function HomeScreen() {
     };
   }, [showBreathing, totalTime, breathingPhase, phaseTimer]);
 
-  const handleTap = () => {
+  const handleTap = async () => {
+    await clearCoachConversation();
+    router.push('/(tabs)/coach' as any);
+  };
+
+  const handleLongPress = () => {
     setShowBreathing(true);
     setBreathingPhase('inhale');
     setPhaseTimer(4);
     setTotalTime(60);
-  };
-
-  const handleLongPress = async () => {
-    await clearCoachConversation();
-    router.push('/(tabs)/coach' as any);
   };
 
   const closeBreathing = () => {
@@ -92,8 +92,8 @@ export default function HomeScreen() {
           <CircleButton onPress={handleTap} onLongPress={handleLongPress} />
         </View>
 
-        <Text style={styles.subtitle}>Tap to start breathing exercise.</Text>
-        <Text style={styles.hint}>Long-press to talk to Less AI.</Text>
+        <Text style={styles.subtitle}>Tap to talk to Less AI.</Text>
+        <Text style={styles.hint}>Long-press to start breathing exercise.</Text>
       </View>
 
       <Modal
