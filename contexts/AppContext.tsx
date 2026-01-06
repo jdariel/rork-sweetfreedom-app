@@ -358,6 +358,34 @@ export const [AppProvider, useApp] = createContextHook(() => {
     saveCoachMessagesMutation.mutate([]);
   };
 
+  const clearAllData = async () => {
+    try {
+      await AsyncStorage.multiRemove([
+        STORAGE_KEYS.PROFILE,
+        STORAGE_KEYS.CRAVINGS,
+        STORAGE_KEYS.STREAK,
+        STORAGE_KEYS.COACH_MESSAGES,
+      ]);
+      setProfile(null);
+      setCravings([]);
+      setStreak({ current: 0, longest: 0, lastCravingDate: null });
+      setCoachMessages([]);
+    } catch (error) {
+      console.error('Error clearing all data:', error);
+      throw error;
+    }
+  };
+
+  const exportData = () => {
+    return {
+      profile,
+      cravings,
+      streak,
+      coachMessages,
+      exportedAt: new Date().toISOString(),
+    };
+  };
+
   const markMessageHelpCheckComplete = (messageId: string) => {
     const updated = coachMessages.map(m => 
       m.id === messageId ? { ...m, needsHelpCheck: false } : m
@@ -381,6 +409,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
     updateCravingDelayUsed,
     addCoachMessage,
     clearCoachMessages,
+    clearAllData,
+    exportData,
     markMessageHelpCheckComplete,
     activateDistressMode,
     deactivateDistressMode,

@@ -1,11 +1,13 @@
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Share } from 'react-native';
 import { useApp } from '@/contexts/AppContext';
 import { goalModeData } from '@/constants/goalModes';
 import colors from '@/constants/colors';
-import { User, Target, Calendar, Award, AlertCircle, ExternalLink } from 'lucide-react-native';
+import { User, Target, Calendar, Award, AlertCircle, ExternalLink, Download, Trash2, MessageSquareOff } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
-  const { profile, streak } = useApp();
+  const { profile, streak, cravings, coachMessages, exportData, clearAllData, clearCoachMessages } = useApp();
+  const router = useRouter();
 
   if (!profile) {
     return null;
@@ -16,6 +18,74 @@ export default function ProfileScreen() {
     month: 'long',
     year: 'numeric'
   });
+
+  const handleExportData = async () => {
+    try {
+      const data = exportData();
+      const jsonString = JSON.stringify(data, null, 2);
+      
+      if (Platform.OS === 'web') {
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `craveless-data-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        await Share.share({
+          message: jsonString,
+          title: 'CraveLess Data Export',
+        });
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      Alert.alert('Export Failed', 'Could not export data. Please try again.');
+    }
+  };
+
+  const handleClearCoachChat = () => {
+    Alert.alert(
+      'Clear Coach Chat',
+      `This will permanently delete all ${coachMessages.length} coach messages. This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear Chat',
+          style: 'destructive',
+          onPress: () => {
+            clearCoachMessages();
+            Alert.alert('Success', 'Coach chat cleared.');
+          },
+        },
+      ]
+    );
+  };
+
+  const handleClearAllData = () => {
+    Alert.alert(
+      'Clear All Data',
+      'This will permanently delete your profile, all cravings, streaks, and coach messages. This cannot be undone.\n\nConsider exporting your data first.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear Everything',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await clearAllData();
+              router.replace('/onboarding');
+            } catch (error) {
+              console.error('Clear error:', error);
+              Alert.alert('Error', 'Could not clear data. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -84,6 +154,50 @@ export default function ProfileScreen() {
             <Text style={styles.tipItem}>• Chat with your AI coach when you need support</Text>
             <Text style={styles.tipItem}>• Celebrate small wins and learn from setbacks</Text>
             <Text style={styles.tipItem}>• Track patterns to understand your triggers</Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Data Controls</Text>
+          <View style={styles.dataControlsCard}>
+            <TouchableOpacity 
+              style={styles.dataButton}
+              onPress={handleExportData}
+            >
+              <Download size={20} color={colors.primary} />
+              <View style={styles.dataButtonText}>
+                <Text style={styles.dataButtonTitle}>Export Data</Text>
+                <Text style={styles.dataButtonSubtitle}>
+                  {cravings.length} cravings, {coachMessages.length} messages
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <View style={styles.dataDivider} />
+
+            <TouchableOpacity 
+              style={styles.dataButton}
+              onPress={handleClearCoachChat}
+            >
+              <MessageSquareOff size={20} color={colors.secondary} />
+              <View style={styles.dataButtonText}>
+                <Text style={styles.dataButtonTitle}>Clear Coach Chat</Text>
+                <Text style={styles.dataButtonSubtitle}>Remove all coach messages</Text>
+              </View>
+            </TouchableOpacity>
+
+            <View style={styles.dataDivider} />
+
+            <TouchableOpacity 
+              style={styles.dataButton}
+              onPress={handleClearAllData}
+            >
+              <Trash2 size={20} color={colors.error} />
+              <View style={styles.dataButtonText}>
+                <Text style={[styles.dataButtonTitle, { color: colors.error }]}>Clear All Data</Text>
+                <Text style={styles.dataButtonSubtitle}>Reset app completely</Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -299,5 +413,39 @@ const styles = StyleSheet.create({
     color: colors.primaryDark,
     lineHeight: 18,
     flex: 1,
+  },
+  dataControlsCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  dataButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 12,
+  },
+  dataButtonText: {
+    flex: 1,
+  },
+  dataButtonTitle: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  dataButtonSubtitle: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  dataDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginHorizontal: 16,
   },
 });
