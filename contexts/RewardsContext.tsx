@@ -77,7 +77,15 @@ export const [RewardsProvider, useRewards] = createContextHook(() => {
   const saveRewardsMutation = useMutation({
     mutationFn: async (newState: RewardsState) => {
       try {
+        if (!newState || typeof newState !== 'object' || Array.isArray(newState)) {
+          console.error('[RewardsState] Invalid data type, cannot save');
+          return createDefaultRewardsState();
+        }
         const jsonString = JSON.stringify(newState);
+        if (!jsonString.startsWith('{')) {
+          console.error('[RewardsState] JSON stringify produced invalid result');
+          return newState;
+        }
         await AsyncStorage.setItem(STORAGE_KEY, jsonString);
         return newState;
       } catch (error) {

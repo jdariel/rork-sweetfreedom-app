@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AppProvider } from "@/contexts/AppContext";
 import { RewardsProvider } from "@/contexts/RewardsContext";
 import { migrateStorageKeysIfNeeded } from "@/utils/storageMigration";
+import { cleanupCorruptStorage } from "@/utils/storageCleanup";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -24,10 +25,14 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   useEffect(() => {
-    migrateStorageKeysIfNeeded().then(() => {
-      console.log('[App] Storage migration check completed');
-    });
-    SplashScreen.hideAsync();
+    cleanupCorruptStorage()
+      .then(() => migrateStorageKeysIfNeeded())
+      .then(() => {
+        console.log('[App] Storage initialization completed');
+      })
+      .finally(() => {
+        SplashScreen.hideAsync();
+      });
   }, []);
 
   return (

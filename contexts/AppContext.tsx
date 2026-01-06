@@ -328,7 +328,15 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const saveCravingsMutation = useMutation({
     mutationFn: async (newCravings: Craving[]) => {
       try {
+        if (!Array.isArray(newCravings)) {
+          console.error('[Cravings] Invalid data type, cannot save');
+          return [];
+        }
         const jsonString = JSON.stringify(newCravings);
+        if (!jsonString.startsWith('[')) {
+          console.error('[Cravings] JSON stringify produced invalid result');
+          return newCravings;
+        }
         await AsyncStorage.setItem(STORAGE_KEYS.CRAVINGS, jsonString);
         return newCravings;
       } catch (error) {
@@ -341,7 +349,15 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const saveProfileMutation = useMutation({
     mutationFn: async (newProfile: UserProfile) => {
       try {
+        if (!newProfile || typeof newProfile !== 'object' || Array.isArray(newProfile)) {
+          console.error('[Profile] Invalid data type, cannot save');
+          return newProfile;
+        }
         const jsonString = JSON.stringify(newProfile);
+        if (!jsonString.startsWith('{')) {
+          console.error('[Profile] JSON stringify produced invalid result');
+          return newProfile;
+        }
         await AsyncStorage.setItem(STORAGE_KEYS.PROFILE, jsonString);
         return newProfile;
       } catch (error) {
@@ -354,7 +370,15 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const saveStreakMutation = useMutation({
     mutationFn: async (newStreak: Streak) => {
       try {
+        if (!newStreak || typeof newStreak !== 'object' || Array.isArray(newStreak)) {
+          console.error('[Streak] Invalid data type, cannot save');
+          return { current: 0, longest: 0, lastCravingDate: null };
+        }
         const jsonString = JSON.stringify(newStreak);
+        if (!jsonString.startsWith('{')) {
+          console.error('[Streak] JSON stringify produced invalid result');
+          return newStreak;
+        }
         await AsyncStorage.setItem(STORAGE_KEYS.STREAK, jsonString);
         return newStreak;
       } catch (error) {
@@ -367,7 +391,15 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const saveCalmMomentumMutation = useMutation({
     mutationFn: async (newMomentum: CalmMomentum) => {
       try {
+        if (!newMomentum || typeof newMomentum !== 'object' || Array.isArray(newMomentum)) {
+          console.error('[CalmMomentum] Invalid data type, cannot save');
+          return { totalPausesCompleted: 0, momentumState: 'active' as const };
+        }
         const jsonString = JSON.stringify(newMomentum);
+        if (!jsonString.startsWith('{')) {
+          console.error('[CalmMomentum] JSON stringify produced invalid result');
+          return newMomentum;
+        }
         await AsyncStorage.setItem(STORAGE_KEYS.CALM_MOMENTUM, jsonString);
         return newMomentum;
       } catch (error) {
@@ -380,6 +412,10 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const saveCoachMessagesMutation = useMutation({
     mutationFn: async (newMessages: CoachMessage[]) => {
       try {
+        if (!Array.isArray(newMessages)) {
+          console.error('[CoachMessages] Invalid data type, cannot save');
+          return [];
+        }
         const validMessages = newMessages
           .filter(m => m && typeof m.content === 'string' && m.content.trim())
           .map(m => ({
@@ -389,6 +425,10 @@ export const [AppProvider, useApp] = createContextHook(() => {
             timestamp: Number(m.timestamp)
           }));
         const jsonString = JSON.stringify(validMessages);
+        if (!jsonString.startsWith('[')) {
+          console.error('[CoachMessages] JSON stringify produced invalid result');
+          return validMessages;
+        }
         await AsyncStorage.setItem(STORAGE_KEYS.COACH_MESSAGES, jsonString);
         return validMessages;
       } catch (error) {
@@ -401,7 +441,15 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const saveRewardsMutation = useMutation({
     mutationFn: async (newRewards: SurpriseReward[]) => {
       try {
+        if (!Array.isArray(newRewards)) {
+          console.error('[Rewards] Invalid data type, cannot save');
+          return [];
+        }
         const jsonString = JSON.stringify(newRewards);
+        if (!jsonString.startsWith('[')) {
+          console.error('[Rewards] JSON stringify produced invalid result');
+          return newRewards;
+        }
         await AsyncStorage.setItem(STORAGE_KEYS.REWARDS, jsonString);
         return newRewards;
       } catch (error) {
