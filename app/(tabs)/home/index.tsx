@@ -3,11 +3,11 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Animated } from '
 import { useApp } from '@/contexts/AppContext';
 import { goalModeData } from '@/constants/goalModes';
 import colors from '@/constants/colors';
-import { Plus, Flame, Target, Clock, TrendingUp, Heart } from 'lucide-react-native';
+import { Plus, Flame, Target, Clock, TrendingUp, Heart, Sparkles } from 'lucide-react-native';
 import { useState, useEffect } from 'react';
 
 export default function HomeScreen() {
-  const { profile, streak, todayCravings, resistedToday, shouldShowStreaks } = useApp();
+  const { profile, streak, todayCravings, resistedToday, shouldShowStreaks, getXPProgress } = useApp();
   const [pulseAnim] = useState(new Animated.Value(1));
 
   useEffect(() => {
@@ -30,24 +30,47 @@ export default function HomeScreen() {
   }, [pulseAnim]);
 
   const goalData = profile ? goalModeData[profile.goalMode] : null;
+  const xpProgress = getXPProgress();
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {profile && (
+          <View style={styles.levelCard}>
+            <View style={styles.levelHeader}>
+              <View style={styles.levelIconContainer}>
+                <Sparkles size={20} color={colors.secondary} />
+              </View>
+              <View style={styles.levelInfo}>
+                <Text style={styles.levelLabel}>Control Level</Text>
+                <Text style={styles.levelNumber}>Level {profile.level}</Text>
+              </View>
+            </View>
+            <View style={styles.xpBarContainer}>
+              <View style={styles.xpBar}>
+                <View style={[styles.xpBarFill, { width: `${xpProgress.percentage}%` }]} />
+              </View>
+              <Text style={styles.xpText}>
+                {xpProgress.current} / {xpProgress.needed} XP
+              </Text>
+            </View>
+          </View>
+        )}
+
         {shouldShowStreaks ? (
           <View style={styles.streakCard}>
             <Animated.View style={[styles.streakIconContainer, { transform: [{ scale: pulseAnim }] }]}>
               <Flame size={48} color={colors.secondary} />
             </Animated.View>
             <Text style={styles.streakNumber}>{streak.current}</Text>
-            <Text style={styles.streakLabel}>Day Streak</Text>
-            <Text style={styles.streakSubtext}>Longest: {streak.longest} days</Text>
+            <Text style={styles.streakLabel}>Calm Streak</Text>
+            <Text style={styles.streakSubtext}>Best run: {streak.longest} days</Text>
           </View>
         ) : (
           <View style={styles.pausedCard}>
             <Heart size={40} color={colors.primary} />
             <Text style={styles.pausedTitle}>Taking a Breath</Text>
-            <Text style={styles.pausedSubtext}>Streaks are paused. Focus on what feels right for you today.</Text>
+            <Text style={styles.pausedSubtext}>Your streak is resting. It&apos;ll be ready when you are.</Text>
           </View>
         )}
 
@@ -71,7 +94,7 @@ export default function HomeScreen() {
           <View style={styles.statsGrid}>
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>{todayCravings.length}</Text>
-              <Text style={styles.statLabel}>Cravings</Text>
+              <Text style={styles.statLabel}>Moments</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
@@ -94,8 +117,8 @@ export default function HomeScreen() {
                 <Clock size={24} color={colors.secondary} />
               </View>
               <View style={styles.actionText}>
-                <Text style={styles.actionTitle}>Log a Craving</Text>
-                <Text style={styles.actionDescription}>Track your craving right now</Text>
+                <Text style={styles.actionTitle}>Handle a Moment</Text>
+                <Text style={styles.actionDescription}>Track what you&apos;re feeling right now</Text>
               </View>
             </View>
           </TouchableOpacity>
@@ -185,6 +208,66 @@ const styles = StyleSheet.create({
   },
   pausedSubtext: {
     fontSize: 16,
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  levelCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  levelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  levelIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.calm.peachLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  levelInfo: {
+    flex: 1,
+  },
+  levelLabel: {
+    fontSize: 12,
+    fontWeight: '600' as const,
+    color: colors.textSecondary,
+    textTransform: 'uppercase' as const,
+    marginBottom: 2,
+  },
+  levelNumber: {
+    fontSize: 20,
+    fontWeight: '700' as const,
+    color: colors.text,
+  },
+  xpBarContainer: {
+    gap: 8,
+  },
+  xpBar: {
+    height: 12,
+    backgroundColor: colors.background,
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
+  xpBarFill: {
+    height: '100%',
+    backgroundColor: colors.secondary,
+    borderRadius: 6,
+  },
+  xpText: {
+    fontSize: 12,
+    fontWeight: '600' as const,
     color: colors.textSecondary,
     textAlign: 'center',
   },

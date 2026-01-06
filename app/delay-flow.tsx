@@ -1,18 +1,22 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, TextInput, Pressable, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '@/constants/colors';
 import { replacementSuggestions } from '@/constants/goalModes';
 import { Clock, CheckCircle, X, MessageCircle, ThumbsUp, Smile, Brain, Star, EyeOff } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
+import * as Haptics from 'expo-haptics';
 
 export default function DelayFlowScreen() {
   const { cravingId } = useLocalSearchParams<{ cravingId: string }>();
-  const { updateCravingFeedback, updateCravingDelayUsed, updateCravingOutcome, profile, toggleFavoriteReplacement, toggleHiddenReplacement } = useApp();
+  const { updateCravingFeedback, updateCravingDelayUsed, updateCravingOutcome, profile, toggleFavoriteReplacement, toggleHiddenReplacement, addXP } = useApp();
   const [stage, setStage] = useState<'delay' | 'suggestions' | 'feedback' | 'outcome' | 'complete'>('delay');
   const [countdown, setCountdown] = useState<number>(300);
   const [pulseAnim] = useState(new Animated.Value(1));
+  const [breathingPhase, setBreathingPhase] = useState<'inhale' | 'hold' | 'exhale' | 'rest'>('inhale');
+  const [breathingCount, setBreathingCount] = useState<number>(0);
+  const [breathingScale] = useState(new Animated.Value(1));
   const [postDelayIntensity, setPostDelayIntensity] = useState<number>(5);
   const [whatHelped, setWhatHelped] = useState<string>('');
 
@@ -44,6 +48,51 @@ export default function DelayFlowScreen() {
     return () => pulse.stop();
   }, [pulseAnim]);
 
+  useEffect(() => {
+    if (stage !== 'delay') return;
+
+    const breathingCycle = Animated.sequence([
+      Animated.timing(breathingScale, {
+        toValue: 1.4,
+        duration: 4000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(breathingScale, {
+        toValue: 1.4,
+        duration: 4000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(breathingScale, {
+        toValue: 1,
+        duration: 4000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(breathingScale, {
+        toValue: 1,
+        duration: 2000,
+        useNativeDriver: true,
+      }),
+    ]);
+
+    const phaseTimer = setInterval(() => {
+      setBreathingPhase((prev) => {
+        if (prev === 'inhale') return 'hold';
+        if (prev === 'hold') return 'exhale';
+        if (prev === 'exhale') return 'rest';
+        setBreathingCount((c) => c + 1);
+        return 'inhale';
+      });
+    }, 4000);
+
+    const loop = Animated.loop(breathingCycle);
+    loop.start();
+
+    return () => {
+      loop.stop();
+      clearInterval(phaseTimer);
+    };
+  }, [stage, breathingScale]);
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -51,10 +100,19 @@ export default function DelayFlowScreen() {
   };
 
   const handleSuggestionTap = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     if (cravingId) {
       updateCravingDelayUsed(cravingId);
     }
     setStage('feedback');
+  };
+
+  const handleBreathingCirclePress = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
   };
 
   const visibleSuggestions = useMemo(() => {
@@ -80,6 +138,7 @@ export default function DelayFlowScreen() {
     if (cravingId) {
       updateCravingFeedback(cravingId, postDelayIntensity, whatHelped || undefined);
     }
+    addXP('reflection');
     setStage('outcome');
   };
 
@@ -87,6 +146,7 @@ export default function DelayFlowScreen() {
     if (cravingId) {
       updateCravingOutcome(cravingId, outcome);
     }
+    addXP('delay-complete');
     setStage('complete');
     setTimeout(() => {
       router.back();
@@ -108,6 +168,11 @@ export default function DelayFlowScreen() {
           <TouchableOpacity
             style={[styles.outcomeCard, styles.resistedCard]}
             onPress={() => handleOutcomeSelect('resisted')}
+            onPressIn={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+              }
+            }}
           >
             <View style={styles.outcomeIconContainer}>
               <ThumbsUp size={32} color={colors.success} />
@@ -121,6 +186,11 @@ export default function DelayFlowScreen() {
           <TouchableOpacity
             style={[styles.outcomeCard, styles.smallPortionCard]}
             onPress={() => handleOutcomeSelect('small-portion')}
+            onPressIn={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              }
+            }}
           >
             <View style={styles.outcomeIconContainer}>
               <Smile size={32} color={colors.warning} />
@@ -134,6 +204,11 @@ export default function DelayFlowScreen() {
           <TouchableOpacity
             style={[styles.outcomeCard, styles.gaveInCard]}
             onPress={() => handleOutcomeSelect('gave-in')}
+            onPressIn={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }
+            }}
           >
             <View style={styles.outcomeIconContainer}>
               <Brain size={32} color={colors.textSecondary} />
@@ -272,6 +347,11 @@ export default function DelayFlowScreen() {
           <TouchableOpacity
             style={styles.continueButton}
             onPress={handleFeedbackSubmit}
+            onPressIn={() => {
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              }
+            }}
           >
             <Text style={styles.continueButtonText}>Continue</Text>
           </TouchableOpacity>
@@ -290,24 +370,39 @@ export default function DelayFlowScreen() {
       </View>
 
       <View style={styles.delayContainer}>
-        <Animated.View style={[styles.timerCircle, { transform: [{ scale: pulseAnim }] }]}>
-          <Clock size={48} color={colors.primary} />
-        </Animated.View>
-
         <Text style={styles.timerText}>{formatTime(countdown)}</Text>
-        <Text style={styles.delaySubtitle}>
-          Take a few deep breaths.{'\n'}Your craving will likely pass.
-        </Text>
+        
+        <Pressable
+          onPressIn={handleBreathingCirclePress}
+          style={styles.breathingCircleContainer}
+        >
+          <Animated.View
+            style={[
+              styles.breathingCircle,
+              { transform: [{ scale: breathingScale }] },
+            ]}
+          >
+            <View style={styles.breathingCircleInner}>
+              <Clock size={32} color={colors.primary} />
+            </View>
+          </Animated.View>
+        </Pressable>
 
-        <View style={styles.breathingCard}>
-          <Text style={styles.breathingTitle}>Breathing Exercise</Text>
-          <Text style={styles.breathingText}>
-            1. Breathe in slowly for 4 counts{'\n'}
-            2. Hold for 4 counts{'\n'}
-            3. Breathe out for 4 counts{'\n'}
-            4. Repeat 3 times
+        <View style={styles.breathingInstructions}>
+          <Text style={styles.breathingPhaseText}>
+            {breathingPhase === 'inhale' && 'Breathe In...'}
+            {breathingPhase === 'hold' && 'Hold...'}
+            {breathingPhase === 'exhale' && 'Breathe Out...'}
+            {breathingPhase === 'rest' && 'Rest...'}
+          </Text>
+          <Text style={styles.breathingCycleText}>
+            {breathingCount > 0 && `${breathingCount} cycle${breathingCount > 1 ? 's' : ''} completed`}
           </Text>
         </View>
+
+        <Text style={styles.delaySubtitle}>
+          Tap the circle and breathe with it.{'\n'}Your moment will pass.
+        </Text>
       </View>
 
       <View style={styles.footer}>
@@ -317,7 +412,13 @@ export default function DelayFlowScreen() {
             if (cravingId) {
               updateCravingDelayUsed(cravingId);
             }
+            addXP('delay-start');
             setStage('suggestions');
+          }}
+          onPressIn={() => {
+            if (Platform.OS !== 'web') {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }
           }}
         >
           <Text style={styles.continueButtonText}>Continue</Text>
@@ -358,20 +459,53 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
-  timerCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: colors.calm.tealLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 32,
-  },
   timerText: {
-    fontSize: 64,
+    fontSize: 48,
     fontWeight: '700' as const,
     color: colors.text,
     marginBottom: 16,
+  },
+  breathingCircleContainer: {
+    width: 200,
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 32,
+  },
+  breathingCircle: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: colors.calm.tealLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  breathingCircleInner: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  breathingInstructions: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  breathingPhaseText: {
+    fontSize: 24,
+    fontWeight: '700' as const,
+    color: colors.primary,
+    marginBottom: 8,
+  },
+  breathingCycleText: {
+    fontSize: 14,
+    color: colors.textSecondary,
   },
   delaySubtitle: {
     fontSize: 18,
@@ -379,23 +513,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 28,
     marginBottom: 48,
-  },
-  breathingCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    padding: 24,
-    width: '100%',
-  },
-  breathingTitle: {
-    fontSize: 18,
-    fontWeight: '700' as const,
-    color: colors.text,
-    marginBottom: 16,
-  },
-  breathingText: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    lineHeight: 24,
   },
   suggestionsContainer: {
     flex: 1,

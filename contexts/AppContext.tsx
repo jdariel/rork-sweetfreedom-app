@@ -2,13 +2,34 @@ import createContextHook from '@nkzw/create-context-hook';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState, useEffect, useMemo } from 'react';
-import { Craving, UserProfile, Streak, GoalMode, CravingOutcome, CoachMessage } from '@/types';
+import { Craving, UserProfile, Streak, GoalMode, CravingOutcome, CoachMessage, XPAction } from '@/types';
 
 const STORAGE_KEYS = {
   PROFILE: '@craveless_profile',
   CRAVINGS: '@craveless_cravings',
   STREAK: '@craveless_streak',
   COACH_MESSAGES: '@craveless_coach_messages',
+};
+
+const XP_VALUES: Record<XPAction['type'], number> = {
+  'delay-start': 10,
+  'delay-complete': 25,
+  'log-moment': 5,
+  'reflection': 15,
+  'coach-chat': 8,
+};
+
+const LEVEL_THRESHOLDS = [0, 100, 250, 450, 700, 1000, 1400, 1850, 2350, 2900, 3500];
+
+const calculateLevel = (xp: number): number => {
+  for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (xp >= LEVEL_THRESHOLDS[i]) return i;
+  }
+  return 0;
+};
+
+const getXPForNextLevel = (level: number): number => {
+  return LEVEL_THRESHOLDS[level + 1] || LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
 };
 
 export const [AppProvider, useApp] = createContextHook(() => {
@@ -170,6 +191,10 @@ export const [AppProvider, useApp] = createContextHook(() => {
       goalMode,
       startDate: Date.now(),
       hasCompletedOnboarding: true,
+      xp: 0,
+      level: 0,
+      unlockedFeatures: [],
+      coachTone: 'neutral',
     };
     setProfile(newProfile);
     saveProfileMutation.mutate(newProfile);
@@ -394,6 +419,53 @@ export const [AppProvider, useApp] = createContextHook(() => {
     saveCoachMessagesMutation.mutate(updated);
   };
 
+  const addXP = (actionType: XPAction['type']) => {
+    if (!profile) return;
+    const xpGain = XP_VALUES[actionType];
+    const newXP = profile.xp + xpGain;
+    const newLevel = calculateLevel(newXP);
+    const oldLevel = profile.level;
+    
+    const newUnlocks: string[] = [];
+    if (newLevel > oldLevel) {
+      if (newLevel >= 2) newUnlocks.push('warm-tone');
+      if (newLevel >= 4) newUnlocks.push('night-insights');
+      if (newLevel >= 6) newUnlocks.push('playful-tone');
+      if (newLevel >= 8) newUnlocks.push('emotion-patterns');
+    }
+
+    const newProfile = {
+      ...profile,
+      xp: newXP,
+      level: newLevel,
+      unlockedFeatures: [...(profile.unlockedFeatures || []), ...newUnlocks],
+    };
+    setProfile(newProfile);
+    saveProfileMutation.mutate(newProfile);
+
+    return { xpGain, newLevel, leveledUp: newLevel > oldLevel, newUnlocks };
+  };
+
+  const changeCoachTone = (tone: 'warm' | 'neutral' | 'playful') => {
+    if (!profile) return;
+    const newProfile = {
+      ...profile,
+      coachTone: tone,
+    };
+    setProfile(newProfile);
+    saveProfileMutation.mutate(newProfile);
+  };
+
+  const getXPProgress = () => {
+    if (!profile) return { current: 0, needed: 100, percentage: 0 };
+    const currentLevelXP = LEVEL_THRESHOLDS[profile.level];
+    const nextLevelXP = getXPForNextLevel(profile.level);
+    const current = profile.xp - currentLevelXP;
+    const needed = nextLevelXP - currentLevelXP;
+    const percentage = (current / needed) * 100;
+    return { current, needed, percentage };
+  };
+
   return {
     profile,
     cravings,
@@ -418,6 +490,9 @@ export const [AppProvider, useApp] = createContextHook(() => {
     resumeStreak,
     toggleFavoriteReplacement,
     toggleHiddenReplacement,
+    addXP,
+    changeCoachTone,
+    getXPProgress,
     isLoading: profileQuery.isLoading || cravingsQuery.isLoading || streakQuery.isLoading || coachMessagesQuery.isLoading,
   };
 });

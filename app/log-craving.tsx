@@ -1,15 +1,16 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '@/contexts/AppContext';
 import { SweetType, Emotion } from '@/types';
 import { sweetTypes, emotions } from '@/constants/goalModes';
 import colors from '@/constants/colors';
 import { X } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 
 export default function LogCravingScreen() {
-  const { addCraving } = useApp();
+  const { addCraving, addXP } = useApp();
   const [sweetType, setSweetType] = useState<SweetType | null>(null);
   const [intensity, setIntensity] = useState<number>(5);
   const [emotion, setEmotion] = useState<Emotion | null>(null);
@@ -27,6 +28,7 @@ export default function LogCravingScreen() {
     };
     
     const createdCraving = addCraving(newCraving);
+    addXP('log-moment');
 
     router.replace(`/delay-flow?cravingId=${createdCraving.id}`);
   };
@@ -34,7 +36,7 @@ export default function LogCravingScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Log Your Craving</Text>
+        <Text style={styles.title}>Handle a Moment</Text>
         <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
           <X size={24} color={colors.text} />
         </TouchableOpacity>
@@ -42,7 +44,7 @@ export default function LogCravingScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>What are you craving?</Text>
+          <Text style={styles.sectionTitle}>What&apos;s calling to you?</Text>
           <View style={styles.optionsGrid}>
             {sweetTypes.map((item) => (
               <TouchableOpacity
@@ -52,6 +54,11 @@ export default function LogCravingScreen() {
                   sweetType === item.value && styles.optionButtonSelected
                 ]}
                 onPress={() => setSweetType(item.value)}
+                onPressIn={() => {
+                  if (Platform.OS !== 'web') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                }}
               >
                 <Text style={styles.optionEmoji}>{item.emoji}</Text>
                 <Text style={[
@@ -77,6 +84,11 @@ export default function LogCravingScreen() {
                     intensity === num && styles.intensityButtonSelected
                   ]}
                   onPress={() => setIntensity(num)}
+                  onPressIn={() => {
+                    if (Platform.OS !== 'web') {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                  }}
                 >
                   <Text style={[
                     styles.intensityButtonText,
@@ -101,6 +113,11 @@ export default function LogCravingScreen() {
                   emotion === item.value && styles.optionButtonSelected
                 ]}
                 onPress={() => setEmotion(item.value)}
+                onPressIn={() => {
+                  if (Platform.OS !== 'web') {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                }}
               >
                 <Text style={styles.optionEmoji}>{item.emoji}</Text>
                 <Text style={[
@@ -132,6 +149,11 @@ export default function LogCravingScreen() {
         <TouchableOpacity
           style={[styles.submitButton, (!sweetType || !emotion) && styles.submitButtonDisabled]}
           onPress={handleSubmit}
+          onPressIn={() => {
+            if (Platform.OS !== 'web' && sweetType && emotion) {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }
+          }}
           disabled={!sweetType || !emotion}
         >
           <Text style={[styles.submitButtonText, (!sweetType || !emotion) && styles.submitButtonTextDisabled]}>

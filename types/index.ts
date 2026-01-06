@@ -27,6 +27,10 @@ export interface UserProfile {
   distressModeActivatedAt?: number;
   favoriteReplacements?: string[];
   hiddenReplacements?: string[];
+  xp: number;
+  level: number;
+  unlockedFeatures?: string[];
+  coachTone?: 'warm' | 'neutral' | 'playful';
 }
 
 export interface Streak {
@@ -58,4 +62,16 @@ export interface AIMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
+}
+
+export interface XPAction {
+  type: 'delay-start' | 'delay-complete' | 'log-moment' | 'reflection' | 'coach-chat';
+  xp: number;
+  label: string;
+}
+
+export interface LevelData {
+  level: number;
+  xpRequired: number;
+  unlocks: string[];
 }
