@@ -170,6 +170,10 @@ export async function getLessAiReplyWithRetry(params: {
     console.log('[Less AI] Sending request to AI...');
     console.log('[Less AI] Toolkit URL:', process.env.EXPO_PUBLIC_TOOLKIT_URL);
     
+    if (!process.env.EXPO_PUBLIC_TOOLKIT_URL) {
+      throw new Error('EXPO_PUBLIC_TOOLKIT_URL is not configured');
+    }
+    
     const response = await generateText({ messages: [{ role: 'user', content: prompt }] });
     console.log('[Less AI] Received response:', response.substring(0, 200));
     
@@ -258,10 +262,13 @@ export async function getLessAiReplyWithRetry(params: {
     }
   } catch (error) {
     console.error('[Less AI] Error in AI call:', error);
-    console.error('[Less AI] Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      name: error instanceof Error ? error.name : 'Unknown',
-    });
+    if (error instanceof Error) {
+      console.error('[Less AI] Error message:', error.message);
+      console.error('[Less AI] Error name:', error.name);
+      console.error('[Less AI] Error stack:', error.stack);
+    } else {
+      console.error('[Less AI] Error details:', JSON.stringify(error, null, 2));
+    }
     
     return {
       assistantMessage: "I'm having trouble connecting right now. Let me offer some quick support:\n\nWant to try a 60-second pause? Sometimes slowing down for a minute helps the moment feel less urgent.\n\nI'll be here when you're ready to talk.",
