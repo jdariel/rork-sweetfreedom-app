@@ -55,7 +55,7 @@ export default function HomeScreen() {
 
   const handleTap = async () => {
     await clearCoachConversation();
-    router.push('/(tabs)/coach' as any);
+    router.push('/coach');
   };
 
   const handleLongPress = () => {
@@ -83,7 +83,7 @@ export default function HomeScreen() {
   const handleTalkToLess = async () => {
     closeBreathing();
     await clearCoachConversation();
-    router.push('/(tabs)/coach' as any);
+    router.push('/coach');
   };
 
   return (
