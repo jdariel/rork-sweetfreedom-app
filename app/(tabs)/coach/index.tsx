@@ -4,7 +4,7 @@ import colors from '@/constants/colors';
 import { Send, Sparkles, Heart, CheckCircle2, MessageCircle, Play, Heart as HeartIcon, Sliders, ListChecks, Lightbulb, CalendarDays } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
 import { getLessAiReplyWithRetry } from '@/utils/lessAi';
-import { loadUserInsightProfile, saveUserInsightProfile, loadAiTurns, addAiTurn, buildRecentStats, applyMemoryUpdates, inferSignalsFromUserText, incrementStat } from '@/utils/lessAiMemory';
+import { loadUserInsightProfile, saveUserInsightProfile, loadAiTurns, addAiTurn, buildRecentStats, applyMemoryUpdates, inferSignalsFromUserText, incrementStat, clearAiTurns } from '@/utils/lessAiMemory';
 import { useRouter } from 'expo-router';
 import { UserInsightProfile } from '@/types';
 
@@ -168,6 +168,9 @@ export default function CoachScreen() {
       addXP('coach-helped', 'Coach was helpful');
       setLastQuickActions([]);
       markMessageHelpCheckComplete(messageId);
+      
+      await clearAiTurns();
+      console.log('[Coach] Conversation cleared - ready for new topic');
     } else {
       if (!insightProfile) return;
       
