@@ -4,12 +4,12 @@ import { useRorkAgent } from '@rork-ai/toolkit-sdk';
 import colors from '@/constants/colors';
 import { Send, Sparkles, Heart, CheckCircle2, MessageCircle } from 'lucide-react-native';
 import { useApp } from '@/contexts/AppContext';
-import { classifyMessage, buildSafePrompt } from '@/utils/aiSafetyFilters';
+import { classifyMessage, buildSafePrompt, UserContextSnapshot, CoachResponse } from '@/utils/aiSafetyFilters';
 
 export default function CoachScreen() {
   const [input, setInput] = useState<string>('');
   const scrollViewRef = useRef<ScrollView>(null);
-  const { coachMessages, addCoachMessage, clearCoachMessages, markMessageHelpCheckComplete, cravings, profile, activateDistressMode, pauseStreak, addXP } = useApp();
+  const { coachMessages, addCoachMessage, clearCoachMessages, markMessageHelpCheckComplete, cravings, profile, streak, activateDistressMode, pauseStreak, addXP } = useApp();
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [streamingContent, setStreamingContent] = useState<string>('');
   const streamTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,12 +44,22 @@ export default function CoachScreen() {
         if (textParts.length > 0) {
           const content = textParts.map(p => p.type === 'text' ? p.text : '').join('\n').trim();
           if (content) {
-            setStreamingContent(content);
+            try {
+              const parsed = JSON.parse(content) as CoachResponse;
+              if (parsed.assistantMessage) {
+                setStreamingContent(parsed.assistantMessage);
+                if (parsed.memoryUpdates?.distressFlag) {
+                  activateDistressMode();
+                }
+              }
+            } catch {
+              setStreamingContent(content);
+            }
           }
         }
       }
     }
-  }, [messages, isStreaming]);
+  }, [messages, isStreaming, activateDistressMode]);
 
   useEffect(() => {
     if (messages.length > 0 && isStreaming && streamingContent) {
@@ -75,6 +85,35 @@ export default function CoachScreen() {
       };
     }
   }, [messages, isStreaming, streamingContent, coachMessages, addCoachMessage]);
+
+  const buildUserContext = (): UserContextSnapshot => {
+    const recentCravings = cravings.slice(-10);
+    const peakTimes = [...new Set(recentCravings.map(c => {
+      const hour = new Date(c.timestamp).getHours();
+      if (hour >= 5 && hour < 12) return 'morning';
+      if (hour >= 12 && hour < 17) return 'afternoon';
+      if (hour >= 17 && hour < 22) return 'evening';
+      return 'late night';
+    }))].slice(0, 3);
+    
+    const triggers = [...new Set(recentCravings.map(c => c.emotion).filter(Boolean))].slice(0, 5);
+    const patterns = recentCravings.length > 0 
+      ? `Last ${Math.min(recentCravings.length, 5)} moments: ${recentCravings.slice(-5).map(c => c.emotion || 'unknown').join(', ')}`
+      : 'No recent patterns';
+    
+    return {
+      goalMode: profile?.goalMode || 'not set',
+      cravingsLogged: cravings.length,
+      cravingsResisted: cravings.filter(c => c.outcome === 'resisted').length,
+      peakTimes,
+      triggers,
+      sweetPreferences: [],
+      tonePreference: profile?.coachTone || 'neutral',
+      distressFlag: profile?.isInDistressMode || false,
+      streakCurrent: streak.current,
+      recentPatterns: patterns,
+    };
+  };
 
   const handleSend = () => {
     if (input.trim()) {
@@ -104,17 +143,14 @@ export default function CoachScreen() {
       ).join('\n\n');
       
       const isFirstMessage = coachMessages.length === 0;
+      const userContext = buildUserContext();
       
       const contextPrompt = buildSafePrompt(
         userMessage,
         safetyAnalysis,
         conversationHistory,
         isFirstMessage,
-        {
-          goalMode: profile?.goalMode || 'not set',
-          cravingsLogged: cravings.length,
-          cravingsResisted: cravings.filter(c => c.outcome === 'resisted').length,
-        }
+        userContext
       );
       
       setIsStreaming(true);
@@ -151,16 +187,14 @@ export default function CoachScreen() {
         `${m.role === 'user' ? 'User' : 'Coach'}: ${m.content}`
       ).join('\n\n');
       
+      const userContext = buildUserContext();
+      
       const contextPrompt = buildSafePrompt(
         lastUserMessage,
         safetyAnalysis,
         conversationHistory,
         false,
-        {
-          goalMode: profile?.goalMode || 'not set',
-          cravingsLogged: cravings.length,
-          cravingsResisted: cravings.filter(c => c.outcome === 'resisted').length,
-        }
+        userContext
       ) + '\n\n[USER FEEDBACK: Need more help - try different approach]';
       
       setIsStreaming(true);
@@ -213,16 +247,13 @@ export default function CoachScreen() {
                     return;
                   }
                   
+                  const userContext = buildUserContext();
                   const contextPrompt = buildSafePrompt(
                     prompt,
                     safetyAnalysis,
                     '',
                     true,
-                    {
-                      goalMode: profile?.goalMode || 'not set',
-                      cravingsLogged: cravings.length,
-                      cravingsResisted: cravings.filter(c => c.outcome === 'resisted').length,
-                    }
+                    userContext
                   );
                   
                   setIsStreaming(true);

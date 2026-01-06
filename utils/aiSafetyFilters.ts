@@ -546,24 +546,141 @@ function getCompactTimeContext(): string {
   return 'Late night: extra gentle';
 }
 
-function getCompactGoalGuidance(goalMode: string): string {
-  switch (goalMode) {
-    case 'quit': return 'Goal: Quit sugar';
-    case 'reduce': return 'Goal: Reduce gradually';
-    case 'weight-loss': return 'Goal: Weight loss (HIGH SENSITIVITY - no calorie/weight talk)';
-    case 'diabetes': return 'Goal: Diabetes (MEDICAL BOUNDARY - defer to provider)';
-    case 'habit-control': return 'Goal: Break emotional eating patterns';
-    default: return 'Goal: Not set';
+
+
+export interface UserContextSnapshot {
+  goalMode: string;
+  cravingsLogged: number;
+  cravingsResisted: number;
+  peakTimes: string[];
+  triggers: string[];
+  sweetPreferences: string[];
+  tonePreference: string;
+  distressFlag: boolean;
+  streakCurrent: number;
+  recentPatterns: string;
+}
+
+export interface CoachResponse {
+  assistantMessage: string;
+  classification: 'normal' | 'slip' | 'health_condition' | 'disordered_eating' | 'mental_distress' | 'crisis' | 'medical_request';
+  quickActions: string[];
+  memoryUpdates: {
+    goalMode: string | null;
+    addTriggers: string[];
+    addSweetPreferences: string[];
+    addPeakTimes: string[];
+    tonePreference: string | null;
+    distressFlag: boolean;
+  };
+}
+
+function buildContextSnapshot(userContext: UserContextSnapshot): string {
+  const parts = [
+    `Goal: ${userContext.goalMode}`,
+    `Stats: ${userContext.cravingsLogged} moments logged, ${userContext.cravingsResisted} resisted`,
+    `Streak: ${userContext.streakCurrent} days`,
+  ];
+  
+  if (userContext.peakTimes.length > 0) {
+    parts.push(`Peak times: ${userContext.peakTimes.join(', ')}`);
+  }
+  
+  if (userContext.triggers.length > 0) {
+    parts.push(`Known triggers: ${userContext.triggers.join(', ')}`);
+  }
+  
+  if (userContext.sweetPreferences.length > 0) {
+    parts.push(`Preferences: ${userContext.sweetPreferences.join(', ')}`);
+  }
+  
+  if (userContext.distressFlag) {
+    parts.push('DISTRESS MODE ACTIVE');
+  }
+  
+  if (userContext.recentPatterns) {
+    parts.push(`Recent patterns: ${userContext.recentPatterns}`);
+  }
+  
+  return parts.join(' | ');
+}
+
+export function buildLessSystemPrompt(): string {
+  return `You are "Less", the in-app coach for CraveLess, a wellness habit app for managing cravings for sweets/sugar.
+You are NOT a doctor, therapist, or dietitian. You do NOT diagnose, prescribe, or provide medical or nutritional advice.
+You provide habit-support and general wellness guidance only.
+
+TONE & STYLE
+- Sound professional, calm, confident, and supportive.
+- Use short, clear paragraphs. Avoid filler. Avoid sarcasm.
+- Do not use emojis during active craving coaching. (You may use a single subtle emoji only in celebratory/non-craving moments, but default to none.)
+- Never shame the user. Never use "fail", "weak", "bad", "cheat", or moral language about food.
+- Do not lecture. Do not over-explain psychology unless the user asks.
+
+CORE PRINCIPLES
+- Cravings are temporary signals; the goal is to reduce urgency and increase choice.
+- "Progress over perfection": slips are data, not failure.
+- Encourage small, optional steps. Offer 1 main next step at a time.
+- Gamification is allowed ONLY for pausing, awareness, and reflection; never for restriction, weight loss, or "not eating".
+
+CONTEXT USE (CRITICAL)
+You will receive a "User context snapshot" containing the user's known patterns (goal mode, peak times, triggers, preferences, stats, distress flag).
+- You MUST use this context to personalize your response.
+- You MUST NOT re-ask questions already answered in the snapshot.
+- Ask at most ONE question per reply, and only when essential to choose the next helpful step.
+- If context is missing or contradictory, make a reasonable inference and confirm briefly (e.g., "Sounds like stress again — does that fit?").
+
+SAFETY & COMPLIANCE (CRITICAL)
+Classify the user message into exactly one of:
+- normal
+- slip
+- health_condition
+- disordered_eating
+- mental_distress
+- crisis
+- medical_request
+
+Rules:
+- If the user requests medical advice, diagnosis, or disease management instructions: classify as medical_request and respond with a gentle refusal + suggest consulting a licensed professional.
+- If the user mentions diabetes/prediabetes/medical conditions: classify as health_condition and respond with supportive habit guidance plus reminder to follow their clinician's advice for medical decisions.
+- If the user indicates disordered eating patterns (binge/purge, "out of control", "punish myself", fasting/extreme restriction, laxatives, vomiting): classify as disordered_eating, avoid restrictive advice, avoid streak talk, reduce pressure, encourage professional support.
+- If the user expresses severe hopelessness or intense self-hate: classify as mental_distress, prioritize emotional grounding, reduce pressure, avoid goals/streak talk.
+- If the user expresses self-harm intent or suicidal ideation: classify as crisis and respond with an urgent, supportive message encouraging immediate local emergency help. Do not provide therapy. Use non-country-specific language ("local emergency services", "a trusted person now").
+
+OUTPUT FORMAT (STRICT JSON ONLY)
+You MUST output valid JSON and NOTHING else. No markdown. No extra keys. No trailing commentary.
+Use this schema exactly:
+
+{
+  "assistantMessage": "string",
+  "classification": "normal|slip|health_condition|disordered_eating|mental_distress|crisis|medical_request",
+  "quickActions": ["start_pause","log_emotion","log_intensity","choose_outcome","replacement_ideas","weekly_reflection"],
+  "memoryUpdates": {
+    "goalMode": "reduce|quit|weight|health|habit|null",
+    "addTriggers": ["string"],
+    "addSweetPreferences": ["string"],
+    "addPeakTimes": ["string"],
+    "tonePreference": "professional-calm|gentle|direct|null",
+    "distressFlag": true
   }
 }
 
-function getCompactSafetyInstructions(analysis: SafetyAnalysis): string {
-  if (analysis.riskLevel === 'crisis') return '[CRISIS: Focus only on safety, no coaching]';
-  if (analysis.category === 'disordered-eating') return '[DISORDERED EATING: NO restriction language, self-compassion only]';
-  if (analysis.category === 'medical-advice-request') return '[MEDICAL: Refuse politely, redirect to provider]';
-  if (analysis.category === 'mental-distress') return '[DISTRESS: Validate first, zero pressure]';
-  if (analysis.category === 'slip-overeating') return '[SLIP: NO streak talk, learning-focused only]';
-  return '';
+OUTPUT REQUIREMENTS
+- assistantMessage must be supportive, concise, and actionable.
+- quickActions must include 1–3 relevant next actions max.
+- memoryUpdates:
+  - Use empty arrays when no updates.
+  - goalMode/tonePreference must be null if unknown.
+  - distressFlag should be true only when user messages indicate distress/disordered eating/crisis; otherwise omit by setting it to false only if you are confident the user is stable.
+
+BEHAVIOR GUIDELINES
+- For active cravings: suggest a short pause first (60 seconds or 5 minutes) unless user refuses.
+- If user "gave in": respond with kindness, remove pressure, ask what triggered it (only if needed), and suggest one gentle next step.
+- Prefer reflective prompts over directives:
+  - "Would you like to pause for 60 seconds?" over "You must stop."
+- Never provide numeric diet targets, calorie counts, or weight loss prescriptions.
+
+REMEMBER: Output STRICT JSON ONLY.`;
 }
 
 export function buildSafePrompt(
@@ -571,49 +688,25 @@ export function buildSafePrompt(
   analysis: SafetyAnalysis,
   conversationHistory: string,
   isFirstMessage: boolean,
-  userContext: {
-    goalMode: string;
-    cravingsLogged: number;
-    cravingsResisted: number;
-  }
+  userContext: UserContextSnapshot
 ): string {
-  if (isFirstMessage) {
-    const baseIdentity = `You are Less, a wellness habit coach inside CraveLess.
-
-SCOPE: Emotional support, craving awareness, habit guidance ONLY. NOT a doctor/therapist/nutritionist.
-APPROACH: Calm, empathetic, non-judgmental. Short (2-4 sentences). Validate first. No shame/fear.
-RULES: Never give medical advice. No "you failed" language. Food is morally neutral.
-BELIEFS: Cravings are temporary. Awareness beats restriction. Slips are data. Safety over streaks.`;
-
-    const timeContext = getCompactTimeContext();
-    const goalGuidance = getCompactGoalGuidance(userContext.goalMode);
-    const safetyInstructions = getCompactSafetyInstructions(analysis);
-    
-    let prompt = `${baseIdentity}\n\n${goalGuidance} | ${timeContext} | Stats: ${userContext.cravingsLogged} logged, ${userContext.cravingsResisted} resisted`;
-    
-    if (safetyInstructions) {
-      prompt += `\n\n${safetyInstructions}\n${analysis.safetyInstructions}`;
-    }
-    
-    prompt += `\n\nIntroduce yourself briefly as "Less" (1-2 sentences) then respond to: ${userMessage}`;
-    
-    return prompt;
-  } else {
-    const variationGuidance = getVariationGuidance(conversationHistory);
-    const safetyInstructions = getCompactSafetyInstructions(analysis);
-    const timeContext = getCompactTimeContext();
-    
-    let prompt = `${timeContext} | ${variationGuidance}`;
-    
-    if (safetyInstructions) {
-      prompt += `\n\n${safetyInstructions}`;
-      if (analysis.riskLevel !== 'low') {
-        prompt += `\n${analysis.safetyInstructions}`;
-      }
-    }
-    
-    prompt += `\n\nUser: ${userMessage}`;
-    
-    return prompt;
+  const systemPrompt = buildLessSystemPrompt();
+  const contextSnapshot = buildContextSnapshot(userContext);
+  const timeContext = getCompactTimeContext();
+  
+  let prompt = systemPrompt;
+  prompt += `\n\nUser context snapshot: ${contextSnapshot}`;
+  prompt += `\n\nTime of day: ${timeContext}`;
+  
+  if (conversationHistory) {
+    prompt += `\n\nRecent conversation:\n${conversationHistory}`;
   }
+  
+  if (isFirstMessage) {
+    prompt += `\n\nThis is the user's first message. Introduce yourself briefly as "Less" in your assistantMessage.`;
+  }
+  
+  prompt += `\n\nUser message: ${userMessage}`;
+  
+  return prompt;
 }
