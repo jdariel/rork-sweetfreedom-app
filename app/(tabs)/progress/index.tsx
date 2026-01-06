@@ -161,7 +161,7 @@ export default function ProgressScreen() {
 
         <TouchableOpacity
           style={styles.reflectionCard}
-          onPress={() => router.push('/weekly-reflection')}
+          onPress={() => router.push('/weekly-reflection' as any)}
         >
           <View style={styles.reflectionIconContainer}>
             <Sparkles size={32} color={colors.secondary} />

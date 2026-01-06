@@ -118,7 +118,7 @@ export default function LogCravingScreen() {
       addXP('add-note', 'Added notes to moment');
     }
 
-    router.replace(`/delay-flow?cravingId=${createdCraving.id}`);
+    router.replace(`/delay-flow?cravingId=${createdCraving.id}` as any);
   };
 
   return (

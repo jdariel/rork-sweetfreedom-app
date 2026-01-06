@@ -95,7 +95,7 @@ export default function ProfileScreen() {
           onPress: async () => {
             try {
               await clearAllData();
-              router.replace('/onboarding');
+              router.replace('/onboarding' as any);
             } catch (error) {
               console.error('Clear error:', error);
               Alert.alert('Error', 'Could not clear data. Please try again.');

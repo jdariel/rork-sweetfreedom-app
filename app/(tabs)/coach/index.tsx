@@ -100,20 +100,20 @@ export default function CoachScreen() {
   const handleQuickAction = (action: string) => {
     switch (action) {
       case 'start_pause':
-        router.push('/delay-flow');
+        router.push('/delay-flow' as any);
         break;
       case 'log_emotion':
       case 'log_intensity':
-        router.push('/log-craving');
+        router.push('/log-craving' as any);
         break;
       case 'choose_outcome':
-        router.push('/log-craving');
+        router.push('/log-craving' as any);
         break;
       case 'replacement_ideas':
-        router.push('/log-craving');
+        router.push('/log-craving' as any);
         break;
       case 'weekly_reflection':
-        router.push('/weekly-reflection');
+        router.push('/weekly-reflection' as any);
         break;
     }
   };

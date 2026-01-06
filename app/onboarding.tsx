@@ -27,7 +27,7 @@ export default function OnboardingScreen() {
       setStep('goal');
     } else if (selectedMode) {
       completeOnboarding(selectedMode);
-      router.replace('/(tabs)/home');
+      router.replace('/(tabs)/home' as any);
     }
   };
 

@@ -121,7 +121,7 @@ export default function HomeScreen() {
           
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => router.push('/log-craving')}
+            onPress={() => router.push('/log-craving' as any)}
             activeOpacity={0.7}
           >
             <View style={styles.actionContent}>
@@ -137,7 +137,7 @@ export default function HomeScreen() {
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => router.push('/(tabs)/progress')}
+            onPress={() => router.push('/(tabs)/progress' as any)}
             activeOpacity={0.7}
           >
             <View style={styles.actionContent}>
@@ -170,7 +170,7 @@ export default function HomeScreen() {
 
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => router.push('/log-craving')}
+        onPress={() => router.push('/log-craving' as any)}
         activeOpacity={0.8}
       >
         <Plus size={28} color={colors.surface} strokeWidth={3} />
