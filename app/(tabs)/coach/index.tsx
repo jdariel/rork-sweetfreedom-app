@@ -11,7 +11,7 @@ import { UserInsightProfile } from '@/types';
 export default function CoachScreen() {
   const [input, setInput] = useState<string>('');
   const scrollViewRef = useRef<ScrollView>(null);
-  const { coachMessages, addCoachMessage, cravings, profile, activateDistressMode, addXP, markMessageHelpCheckComplete } = useApp();
+  const { coachMessages, addCoachMessage, cravings, profile, activateDistressMode, addXP, markMessageHelpCheckComplete, clearCoachConversation } = useApp();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [insightProfile, setInsightProfile] = useState<UserInsightProfile | null>(null);
   const [lastQuickActions, setLastQuickActions] = useState<string[]>([]);
@@ -36,6 +36,14 @@ export default function CoachScreen() {
     
     const userMessage = input.trim();
     setInput('');
+    
+    if (userMessage.toLowerCase() === 'new chat') {
+      await clearAiTurns();
+      clearCoachConversation();
+      setLastQuickActions([]);
+      console.log('[Coach] New chat started - conversation cleared');
+      return;
+    }
     
     addCoachMessage({ role: 'user', content: userMessage });
     addXP('coach-message', 'Sent message to coach');
@@ -170,6 +178,7 @@ export default function CoachScreen() {
       markMessageHelpCheckComplete(messageId);
       
       await clearAiTurns();
+      clearCoachConversation();
       console.log('[Coach] Conversation cleared - ready for new topic');
     } else {
       if (!insightProfile) return;
