@@ -67,6 +67,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const [streak, setStreak] = useState<Streak>({ current: 0, longest: 0, lastCravingDate: null });
   const [calmMomentum, setCalmMomentum] = useState<CalmMomentum>({
     totalPausesCompleted: 0,
+    totalBreathsCompleted: 0,
     momentumState: 'active',
   });
   const [coachMessages, setCoachMessages] = useState<CoachMessage[]>([]);
@@ -188,13 +189,13 @@ export const [AppProvider, useApp] = createContextHook(() => {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEYS.CALM_MOMENTUM);
         if (!stored || stored === 'undefined' || stored === 'null' || stored.trim() === '') {
-          return { totalPausesCompleted: 0, momentumState: 'active' as const };
+          return { totalPausesCompleted: 0, totalBreathsCompleted: 0, momentumState: 'active' as const };
         }
         
         if (!stored.startsWith('{')) {
           console.error('[CalmMomentum] Invalid JSON format, clearing');
           await AsyncStorage.removeItem(STORAGE_KEYS.CALM_MOMENTUM);
-          return { totalPausesCompleted: 0, momentumState: 'active' as const };
+          return { totalPausesCompleted: 0, totalBreathsCompleted: 0, momentumState: 'active' as const };
         }
         
         let parsed;
@@ -203,7 +204,11 @@ export const [AppProvider, useApp] = createContextHook(() => {
         } catch {
           console.error('[CalmMomentum] JSON parse error, clearing');
           await AsyncStorage.removeItem(STORAGE_KEYS.CALM_MOMENTUM);
-          return { totalPausesCompleted: 0, momentumState: 'active' as const };
+          return { totalPausesCompleted: 0, totalBreathsCompleted: 0, momentumState: 'active' as const };
+        }
+        
+        if (!parsed.totalBreathsCompleted) {
+          parsed.totalBreathsCompleted = 0;
         }
         
         return parsed;
@@ -212,7 +217,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
         try {
           await AsyncStorage.removeItem(STORAGE_KEYS.CALM_MOMENTUM);
         } catch {}
-        return { totalPausesCompleted: 0, momentumState: 'active' as const };
+        return { totalPausesCompleted: 0, totalBreathsCompleted: 0, momentumState: 'active' as const };
       }
     },
     retry: false,
@@ -393,7 +398,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       try {
         if (!newMomentum || typeof newMomentum !== 'object' || Array.isArray(newMomentum)) {
           console.error('[CalmMomentum] Invalid data type, cannot save');
-          return { totalPausesCompleted: 0, momentumState: 'active' as const };
+          return { totalPausesCompleted: 0, totalBreathsCompleted: 0, momentumState: 'active' as const };
         }
         const jsonString = JSON.stringify(newMomentum);
         if (!jsonString.startsWith('{')) {
@@ -565,7 +570,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     saveStreakMutation.mutate(newStreak);
   };
 
-  const setMomentumResting = (reason: 'slip' | 'distress' | 'manual') => {
+  const setMomentumResting = (reason: 'slip' | 'distress') => {
     const newMomentum: CalmMomentum = {
       ...calmMomentum,
       momentumState: 'resting',
@@ -574,7 +579,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     };
     setCalmMomentum(newMomentum);
     saveCalmMomentumMutation.mutate(newMomentum);
-    console.log('[Calm Momentum] Set to resting:', reason);
+    console.log('[Calm Momentum] Set to resting (totals preserved):', reason, 'Pauses:', newMomentum.totalPausesCompleted, 'Breaths:', newMomentum.totalBreathsCompleted);
   };
 
   const setMomentumActive = () => {
@@ -599,7 +604,20 @@ export const [AppProvider, useApp] = createContextHook(() => {
     };
     setCalmMomentum(newMomentum);
     saveCalmMomentumMutation.mutate(newMomentum);
-    console.log('[Calm Momentum] Pause completed, total:', newMomentum.totalPausesCompleted);
+    console.log('[Calm Momentum] Pause completed, total pauses:', newMomentum.totalPausesCompleted);
+  };
+
+  const incrementBreathsCompleted = () => {
+    const newMomentum: CalmMomentum = {
+      ...calmMomentum,
+      totalBreathsCompleted: calmMomentum.totalBreathsCompleted + 1,
+      momentumState: 'active',
+      restingReason: undefined,
+      lastActiveISO: new Date().toISOString(),
+    };
+    setCalmMomentum(newMomentum);
+    saveCalmMomentumMutation.mutate(newMomentum);
+    console.log('[Calm Momentum] Breath completed, total breaths:', newMomentum.totalBreathsCompleted);
   };
 
   const pauseStreak = () => {
@@ -737,7 +755,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       setProfile(null);
       setCravings([]);
       setStreak({ current: 0, longest: 0, lastCravingDate: null });
-      setCalmMomentum({ totalPausesCompleted: 0, momentumState: 'active' });
+      setCalmMomentum({ totalPausesCompleted: 0, totalBreathsCompleted: 0, momentumState: 'active' });
       setCoachMessages([]);
     } catch (error) {
       console.error('Error clearing all data:', error);
@@ -1079,6 +1097,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     setMomentumResting,
     setMomentumActive,
     incrementPausesCompleted,
+    incrementBreathsCompleted,
     toggleFavoriteReplacement,
     toggleHiddenReplacement,
     addXP,

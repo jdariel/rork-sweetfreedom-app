@@ -1,22 +1,32 @@
 import { router } from 'expo-router';
-import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Animated, Platform, AccessibilityInfo } from 'react-native';
 import { useApp } from '@/contexts/AppContext';
 import { useRewards } from '@/contexts/RewardsContext';
 import colors from '@/constants/colors';
-import { useState, useEffect, useRef } from 'react';
-import CalmRewardModal from '@/components/CalmRewardModal';
-import LevelUpModal from '@/components/LevelUpModal';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import * as Haptics from 'expo-haptics';
 import CircleButton from '@/components/CircleButton';
 
 export default function HomeScreen() {
-  const { clearCoachConversation, profile } = useApp();
-  const { pendingReward, pendingLevelUp, dismissPendingReward, dismissPendingLevelUp, awardXP, equipReward } = useRewards();
+  const { clearCoachConversation, profile, incrementBreathsCompleted } = useApp();
+  const { awardXP } = useRewards();
   const [showBreathing, setShowBreathing] = useState(false);
   const [breathingPhase, setBreathingPhase] = useState<'inhale' | 'hold' | 'exhale'>('inhale');
-  const [phaseTimer, setPhaseTimer] = useState(4);
+  const [phaseTimer, setPhaseTimer] = useState(0);
   const [totalTime, setTotalTime] = useState(60);
   const [hasCheckedComeback, setHasCheckedComeback] = useState(false);
+  const [breathingLineIndex, setBreathingLineIndex] = useState(0);
+  const [reducedMotion, setReducedMotion] = useState(false);
   const breathingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const circleScale = useRef(new Animated.Value(0.5)).current;
+
+  const breathingLines = [
+    'Inhale...',
+    'Hold...',
+    'Exhale...',
+    'Nothing to fix.',
+    'Just breathing.',
+  ];
 
   useEffect(() => {
     if (!hasCheckedComeback) {
@@ -26,6 +36,26 @@ export default function HomeScreen() {
   }, [hasCheckedComeback, awardXP, profile?.isInDistressMode, profile?.lastActiveDate]);
 
   useEffect(() => {
+    if (Platform.OS === 'web') return;
+    AccessibilityInfo.isReduceMotionEnabled().then(enabled => {
+      setReducedMotion(enabled);
+    }).catch(() => {});
+  }, []);
+
+  const animateCircle = useCallback((toValue: number) => {
+    if (reducedMotion) {
+      circleScale.setValue(toValue);
+      return;
+    }
+    Animated.spring(circleScale, {
+      toValue,
+      useNativeDriver: true,
+      tension: 20,
+      friction: 7,
+    }).start();
+  }, [reducedMotion, circleScale]);
+
+  useEffect(() => {
     if (showBreathing && totalTime > 0) {
       breathingTimerRef.current = setTimeout(() => {
         setTotalTime((prev) => prev - 1);
@@ -33,12 +63,29 @@ export default function HomeScreen() {
           if (prev <= 1) {
             if (breathingPhase === 'inhale') {
               setBreathingPhase('hold');
-              return 4;
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              }
+              animateCircle(0.7);
+              setBreathingLineIndex(1);
+              return 2;
             } else if (breathingPhase === 'hold') {
               setBreathingPhase('exhale');
-              return 4;
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              }
+              animateCircle(0.3);
+              const nextLine = (breathingLineIndex + 1) % 5;
+              setBreathingLineIndex(nextLine);
+              return 6;
             } else {
               setBreathingPhase('inhale');
+              if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              }
+              animateCircle(1);
+              const nextLine = (breathingLineIndex + 1) % 5;
+              setBreathingLineIndex(nextLine);
               return 4;
             }
           }
@@ -51,7 +98,7 @@ export default function HomeScreen() {
         clearTimeout(breathingTimerRef.current);
       }
     };
-  }, [showBreathing, totalTime, breathingPhase, phaseTimer]);
+  }, [showBreathing, totalTime, breathingPhase, phaseTimer, breathingLineIndex, animateCircle]);
 
   const handleTap = () => {
     console.log('[Home] handleTap called - navigating to coach');
@@ -68,6 +115,8 @@ export default function HomeScreen() {
     setBreathingPhase('inhale');
     setPhaseTimer(4);
     setTotalTime(60);
+    setBreathingLineIndex(0);
+    animateCircle(1);
   };
 
   const closeBreathing = () => {
@@ -75,6 +124,8 @@ export default function HomeScreen() {
     setBreathingPhase('inhale');
     setPhaseTimer(4);
     setTotalTime(60);
+    setBreathingLineIndex(0);
+    circleScale.setValue(0.5);
     if (breathingTimerRef.current) {
       clearTimeout(breathingTimerRef.current);
     }
@@ -82,10 +133,13 @@ export default function HomeScreen() {
 
   const handleBreathingDone = () => {
     awardXP('complete-1min-pause', profile?.isInDistressMode || false, profile?.lastActiveDate);
+    incrementBreathsCompleted();
     closeBreathing();
   };
 
   const handleTalkToLess = async () => {
+    awardXP('complete-1min-pause', profile?.isInDistressMode || false, profile?.lastActiveDate);
+    incrementBreathsCompleted();
     closeBreathing();
     await clearCoachConversation();
     router.push('/coach');
@@ -94,14 +148,14 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Take a breath.</Text>
+        <Text style={styles.instruction}>When a moment shows up, tap.</Text>
         
         <View style={styles.circleContainer}>
           <CircleButton onPress={handleTap} onLongPress={handleLongPress} />
         </View>
 
-        <Text style={styles.subtitle}>Tap to talk to Less AI.</Text>
-        <Text style={styles.hint}>Long-press for breathing exercise.</Text>
+        <Text style={styles.subtitle}>No logging required.</Text>
+        <Text style={styles.hint}>Long-press to breathe.</Text>
       </View>
 
       <Modal
@@ -114,22 +168,19 @@ export default function HomeScreen() {
           <View style={styles.breathingModal}>
             {totalTime > 0 ? (
               <>
-                <Text style={styles.breathingTimer}>{totalTime}s</Text>
                 <Text style={styles.breathingInstruction}>
-                  {breathingPhase === 'inhale' && 'Breathe in...'}
-                  {breathingPhase === 'hold' && 'Hold...'}
-                  {breathingPhase === 'exhale' && 'Breathe out...'}
+                  {breathingLines[breathingLineIndex]}
                 </Text>
                 <View style={styles.breathingCircleContainer}>
-                  <View
+                  <Animated.View
                     style={[
                       styles.breathingCircle,
-                      breathingPhase === 'inhale' && styles.breathingCircleExpand,
-                      breathingPhase === 'exhale' && styles.breathingCircleShrink,
+                      {
+                        transform: [{ scale: circleScale }],
+                      },
                     ]}
                   />
                 </View>
-                <Text style={styles.phaseCounter}>{phaseTimer}</Text>
                 <View style={styles.progressContainer}>
                   <View
                     style={[
@@ -141,10 +192,7 @@ export default function HomeScreen() {
               </>
             ) : (
               <View style={styles.completeActions}>
-                <Text style={styles.breathingTitle}>Nice work.</Text>
-                <Text style={styles.completeText}>
-                  Want to talk to Less or save this as a moment?
-                </Text>
+                <Text style={styles.breathingTitle}>Nice. How do you want to continue?</Text>
                 <TouchableOpacity style={styles.actionButton} onPress={handleTalkToLess}>
                   <Text style={styles.actionButtonText}>Talk to Less</Text>
                 </TouchableOpacity>
@@ -161,29 +209,6 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-
-      <CalmRewardModal 
-        reward={pendingReward}
-        visible={!!pendingReward}
-        onDismiss={dismissPendingReward}
-        onTryNow={() => {
-          if (pendingReward) {
-            equipReward(pendingReward.id);
-          }
-        }}
-      />
-      
-      <LevelUpModal
-        level={pendingLevelUp?.level || 0}
-        reward={pendingLevelUp?.reward || null}
-        visible={!!pendingLevelUp}
-        onDismiss={dismissPendingLevelUp}
-        onUseNow={() => {
-          if (pendingLevelUp?.reward) {
-            equipReward(pendingLevelUp.reward.id);
-          }
-        }}
-      />
     </View>
   );
 }
@@ -199,7 +224,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 32,
   },
-  title: {
+  instruction: {
     fontSize: 18,
     fontWeight: '500' as const,
     color: colors.textSecondary,
@@ -252,19 +277,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
   },
-  breathingTimer: {
-    fontSize: 16,
-    fontWeight: '600' as const,
-    color: colors.textLight,
-    marginBottom: 24,
-  },
+
   breathingInstruction: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '600' as const,
     color: colors.text,
     textAlign: 'center',
-    marginBottom: 32,
-    minHeight: 40,
+    marginBottom: 48,
+    minHeight: 36,
   },
   breathingCircleContainer: {
     width: 160,
@@ -274,26 +294,10 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   breathingCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.calm.teal,
-  },
-  breathingCircleExpand: {
     width: 140,
     height: 140,
     borderRadius: 70,
-  },
-  breathingCircleShrink: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-  },
-  phaseCounter: {
-    fontSize: 48,
-    fontWeight: '800' as const,
-    color: colors.primary,
-    marginBottom: 24,
+    backgroundColor: colors.calm.teal,
   },
   progressContainer: {
     width: '100%',

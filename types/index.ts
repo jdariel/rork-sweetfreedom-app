@@ -66,8 +66,9 @@ export interface Streak {
 
 export interface CalmMomentum {
   totalPausesCompleted: number;
+  totalBreathsCompleted: number;
   momentumState: 'active' | 'resting';
-  restingReason?: 'slip' | 'distress' | 'manual';
+  restingReason?: 'slip' | 'distress';
   lastActiveISO?: string;
   lastRestISO?: string;
 }

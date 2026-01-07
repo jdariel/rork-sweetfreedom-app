@@ -234,9 +234,9 @@ export default function CoachScreen() {
           <View style={styles.iconContainer}>
             <Sparkles size={48} color={colors.primary} />
           </View>
-          <Text style={styles.emptyTitle}>Hey, I&apos;m Less</Text>
+          <Text style={styles.emptyTitle}>Hey — I&apos;m here.</Text>
           <Text style={styles.emptySubtitle}>
-            Your calm coach for cravings. I&apos;m here to help you pause, reflect, and regain control. Share what&apos;s on your mind:
+            Want to breathe for a minute, or tell me what&apos;s going on?
           </Text>
           <View style={styles.quickPromptsList}>
             {quickPrompts.map((prompt, index) => (
